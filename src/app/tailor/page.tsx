@@ -675,20 +675,20 @@ Nice to have:
     <AppLayout>
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Step Progress Bar (Apple Styled) */}
-        <div className="no-print bg-white border border-[#E5E5E7] p-4 rounded-xl shadow-apple-card flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="no-print bg-white border border-[#E5E5E7] p-3 sm:p-4 rounded-xl shadow-apple-card flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar py-0.5">
             {[
-              { num: 1, label: 'Job Description' },
-              { num: 2, label: 'Profile Matching' },
-              { num: 3, label: 'Preview & Review' },
+              { num: 1, label: 'Job Description', short: '1. JD' },
+              { num: 2, label: 'Profile Matching', short: '2. Match' },
+              { num: 3, label: 'Preview & Review', short: '3. Review' },
             ].map((step) => {
               const isCurrent = currentStep === step.num;
               const isDone = currentStep > step.num;
 
               return (
-                <div key={step.num} className="flex items-center gap-2">
+                <div key={step.num} className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                   <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${
                       isDone
                         ? 'bg-emerald-600 text-white'
                         : isCurrent
@@ -699,15 +699,16 @@ Nice to have:
                     {isDone ? <Check className="w-3.5 h-3.5" /> : step.num}
                   </div>
                   <span
-                    className={`text-xs ${
+                    className={`text-xs whitespace-nowrap ${
                       isCurrent
                         ? 'font-semibold text-[#1D1D1F]'
                         : 'text-[#666666]'
                     }`}
                   >
-                    {step.label}
+                    <span className="hidden sm:inline">{step.label}</span>
+                    <span className="sm:hidden">{step.short}</span>
                   </span>
-                  {step.num < 3 && <span className="text-[#CCCCCC] mx-1">→</span>}
+                  {step.num < 3 && <span className="text-[#CCCCCC] mx-0.5 sm:mx-1">→</span>}
                 </div>
               );
             })}
@@ -719,6 +720,7 @@ Nice to have:
               size="sm"
               onClick={() => setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as any) : 1))}
               icon={<RotateCcw className="w-3.5 h-3.5" />}
+              className="self-start sm:self-auto text-xs"
             >
               Back to Step {currentStep - 1}
             </Button>
@@ -1345,12 +1347,12 @@ Nice to have:
         {currentStep === 3 && tailoredResume && (
           <div className="space-y-6">
             {/* Top Review Controls Bar */}
-            <div className="no-print bg-white border border-[#E5E5E7] p-4 rounded-xl shadow-apple-card flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex bg-[#F5F5F7] p-1 rounded-lg">
+            <div className="no-print bg-white border border-[#E5E5E7] p-3 sm:p-4 rounded-xl shadow-apple-card flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 max-w-full">
+                <div className="flex bg-[#F5F5F7] p-1 rounded-lg overflow-x-auto no-scrollbar max-w-full shrink-0">
                   <button
                     onClick={() => setPreviewMode('preview')}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                    className={`px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       previewMode === 'preview'
                         ? 'bg-white text-[#0066CC] font-semibold shadow-xs'
                         : 'text-[#555555] hover:text-[#1D1D1F]'
@@ -1361,25 +1363,25 @@ Nice to have:
                   </button>
                   <button
                     onClick={() => setPreviewMode('diff')}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                    className={`px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       previewMode === 'diff'
                         ? 'bg-white text-[#0066CC] font-semibold shadow-xs'
                         : 'text-[#555555] hover:text-[#1D1D1F]'
                     }`}
                   >
                     <GitCompare className="w-3.5 h-3.5" />
-                    Change Comparison ({tailoredResume.diff.changes.length})
+                    Diff ({tailoredResume.diff.changes.length})
                   </button>
                   <button
                     onClick={() => setPreviewMode('edit')}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                    className={`px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       previewMode === 'edit'
                         ? 'bg-white text-[#0066CC] font-semibold shadow-xs'
                         : 'text-[#555555] hover:text-[#1D1D1F]'
                     }`}
                   >
                     <Edit3 className="w-3.5 h-3.5" />
-                    Inline Edit
+                    Edit
                   </button>
                   <button
                     onClick={() => {
@@ -1389,7 +1391,7 @@ Nice to have:
                         setPreviewMode('cover-letter');
                       }
                     }}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                    className={`px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       previewMode === 'cover-letter'
                         ? 'bg-white text-[#0066CC] font-semibold shadow-xs'
                         : 'text-[#555555] hover:text-[#1D1D1F]'
@@ -1837,12 +1839,13 @@ Nice to have:
 
                 {/* Pixel-Perfect Rendered Resume Sheet */}
                 {previewMode === 'preview' && (
-                  <div
-                    id="resume-print-area"
-                    className={`page-sheet bg-white border border-[#E5E5E7] p-8 md:p-10 rounded-xl shadow-apple-card space-y-4 text-xs text-[#1D1D1F] ${
-                      selectedTemplate.layoutType === 'classic' ? 'font-sans' : 'font-sans'
-                    }`}
-                  >
+                  <div className="overflow-x-auto -mx-1 px-1">
+                    <div
+                      id="resume-print-area"
+                      className={`page-sheet bg-white border border-[#E5E5E7] p-4 sm:p-6 md:p-10 rounded-xl shadow-apple-card space-y-4 text-xs text-[#1D1D1F] ${
+                        selectedTemplate.layoutType === 'classic' ? 'font-sans' : 'font-sans'
+                      }`}
+                    >
                     {/* Header (Exact layout matching candidate resume) */}
                     <div className="text-center pb-2">
                       <h1 className="text-2xl font-bold uppercase tracking-wide text-black font-serif mb-3">
@@ -2053,6 +2056,7 @@ Nice to have:
                       </div>
                     )}
                   </div>
+                  </div>
                 )}
 
                 {/* 1-Page Tailored Cover Letter Sheet */}
@@ -2151,10 +2155,11 @@ Nice to have:
                         ) : null}
 
                         {/* Pixel-Perfect Rendered Cover Letter Sheet */}
-                        <div
-                          id="cover-letter-print-area"
-                          className="page-sheet bg-white border border-[#E5E5E7] p-10 md:p-14 rounded-xl shadow-apple-card space-y-5 text-[12.5px] text-[#1D1D1F] font-serif leading-relaxed"
-                        >
+                        <div className="overflow-x-auto -mx-1 px-1">
+                          <div
+                            id="cover-letter-print-area"
+                            className="page-sheet bg-white border border-[#E5E5E7] p-5 sm:p-8 md:p-14 rounded-xl shadow-apple-card space-y-5 text-[12.5px] text-[#1D1D1F] font-serif leading-relaxed"
+                          >
                           {/* Candidate Header */}
                           <div className="text-center pb-3 border-b border-black">
                             <h1 className="text-2xl font-bold uppercase tracking-wide text-black mb-2">
@@ -2237,6 +2242,7 @@ Nice to have:
                             <p>{coverLetter.signoff}</p>
                             <p className="font-bold text-black text-sm">{coverLetter.candidateName}</p>
                           </div>
+                        </div>
                         </div>
                       </div>
                     ) : (

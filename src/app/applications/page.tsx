@@ -140,7 +140,7 @@ export default function ApplicationsPage() {
         </div>
 
         {/* Filter bar */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
           {['All', 'Applied', 'Interviewing', 'Offer', 'Draft', 'Archived'].map((status) => (
             <button
               key={status}

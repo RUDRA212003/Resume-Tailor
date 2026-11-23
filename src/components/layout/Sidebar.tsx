@@ -62,7 +62,7 @@ export const Sidebar: React.FC = () => {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-white border-r border-[#E5E5E7] flex flex-col h-screen sticky top-0 shrink-0 select-none">
+    <aside className="hidden md:flex w-64 bg-white border-r border-[#E5E5E7] flex-col h-screen sticky top-0 shrink-0 select-none">
       {/* Brand Header */}
       <div className="p-6 border-b border-[#E5E5E7] flex items-center gap-3">
         <div className="w-9 h-9 rounded-lg bg-[#0066CC] flex items-center justify-center text-white shadow-sm">

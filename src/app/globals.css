@@ -42,6 +42,20 @@
   background: #aeaeb2;
 }
 
+/* Safe area padding for mobile devices (iPhone home indicator) */
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 12px), 12px);
+}
+
+/* Hide scrollbar for smooth touch-swipe tab strips */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Print styling for resume generation */
 @media print {
   @page {

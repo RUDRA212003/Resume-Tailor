@@ -381,7 +381,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 border-b border-[#E5E5E7] overflow-x-auto pb-1 text-sm font-medium">
+        <div className="flex items-center gap-1 border-b border-[#E5E5E7] overflow-x-auto no-scrollbar pb-1 text-sm font-medium">
           {[
             { id: 'personal', label: 'Personal Info', icon: <User className="w-4 h-4" /> },
             { id: 'summary', label: 'Summaries', icon: <FileText className="w-4 h-4" /> },
