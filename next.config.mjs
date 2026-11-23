@@ -10,10 +10,8 @@ const nextConfig = {
       'pdfkit',
     ],
     outputFileTracingIncludes: {
-      '/api/**/*': [
-        './node_modules/pdfkit/**/*',
-        './node_modules/.pnpm/pdfkit@*/**/*',
-      ],
+      '/api/export/pdf': ['./node_modules/pdfkit/js/standard-fonts/**/*'],
+      '/api/export/cover-letter-pdf': ['./node_modules/pdfkit/js/standard-fonts/**/*'],
     },
   },
   webpack: (config, { isServer }) => {

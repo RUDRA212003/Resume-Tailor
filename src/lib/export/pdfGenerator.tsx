@@ -393,12 +393,23 @@ export const ResumePdfDocument: React.FC<PdfGeneratorOptions> = ({
                 {isClassic ? 'Technical Skills' : 'Technical Skills'}
               </Text>
             </View>
-            {resume.selectedSkills.map((catGroup, idx) => (
-              <View key={idx} style={styles.skillRow}>
-                <Text style={styles.skillCategory}>{catGroup.category}:</Text>
-                <Text style={styles.skillList}>{catGroup.skills.join(', ')}</Text>
-              </View>
-            ))}
+            {resume.selectedSkills.map((catGroup, idx) => {
+              const skillText = Array.isArray(catGroup.skills)
+                ? catGroup.skills
+                    .map((s: any) => (typeof s === 'string' ? s : s?.name || ''))
+                    .filter(Boolean)
+                    .join(', ')
+                : typeof (catGroup as any).name === 'string'
+                ? (catGroup as any).name
+                : '';
+
+              return (
+                <View key={idx} style={styles.skillRow}>
+                  <Text style={styles.skillCategory}>{catGroup.category || 'Skills'}:</Text>
+                  <Text style={styles.skillList}>{skillText}</Text>
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -480,7 +491,7 @@ export const ResumePdfDocument: React.FC<PdfGeneratorOptions> = ({
                   </View>
 
                   {/* Technologies */}
-                  {proj.technologies && proj.technologies.length > 0 && (
+                  {Array.isArray(proj.technologies) && proj.technologies.length > 0 && (
                     <Text style={styles.itemDescription}>
                       Technologies: {proj.technologies.join(', ')}
                     </Text>

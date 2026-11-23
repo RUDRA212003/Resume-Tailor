@@ -235,7 +235,14 @@ export async function generateResumeDocx(
               color: textDarkHex,
             }),
             new TextRun({
-              text: catGroup.skills.join(', '),
+              text: Array.isArray(catGroup.skills)
+                ? catGroup.skills
+                    .map((s: any) => (typeof s === 'string' ? s : s?.name || ''))
+                    .filter(Boolean)
+                    .join(', ')
+                : typeof (catGroup as any).name === 'string'
+                ? (catGroup as any).name
+                : '',
               size: 19,
               font: fontFamily,
               color: textDarkHex,
@@ -335,7 +342,7 @@ export async function generateResumeDocx(
               font: fontFamily,
               color: textDarkHex,
             }),
-            ...(proj.technologies && proj.technologies.length > 0
+            ...(Array.isArray(proj.technologies) && proj.technologies.length > 0
               ? [
                   new TextRun({
                     text: ` | ${proj.technologies.join(', ')}`,
