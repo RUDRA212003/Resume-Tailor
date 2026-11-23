@@ -1,4 +1,5 @@
 import React from 'react';
+import '@/lib/export/ensureStandardFonts';
 import {
   Document,
   Page,

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import '@/lib/export/ensureStandardFonts';
 import { CoverLetterData } from '@/lib/ai/coverLetterEngine';
 import { generateCoverLetterPdfBuffer } from '@/lib/export/coverLetterPdf';
 

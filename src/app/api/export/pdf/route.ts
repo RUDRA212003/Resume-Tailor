@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import '@/lib/export/ensureStandardFonts';
 import { generateResumePdf } from '@/lib/export/pdfGenerator';
 import { TailoredResume, Profile, ResumeTemplate } from '@/types';
 
