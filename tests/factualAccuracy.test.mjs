@@ -8,7 +8,7 @@ import {
   resolveTechnologyName,
 } from '../src/lib/verification/factChecker';
 import { sanitizeProfileForAI } from '../src/lib/ai/privacySanitizer';
-import { DEFAULT_PROFILE } from '../src/lib/storage/defaultData';
+import { MOCK_SAMPLE_PROFILE as DEFAULT_PROFILE } from '../src/lib/storage/defaultData';
 
 test('Critical Factual Accuracy Suite', async (t) => {
   const profile = JSON.parse(JSON.stringify(DEFAULT_PROFILE));

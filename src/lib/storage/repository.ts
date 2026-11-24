@@ -9,6 +9,7 @@ import type {
 } from '@/types';
 import {
   DEFAULT_PROFILE,
+  createEmptyProfile,
   BUILT_IN_TEMPLATES,
   DEFAULT_USER_SETTINGS,
 } from './defaultData';
@@ -121,7 +122,20 @@ export const repository = {
   // User Profile (multi-user scoped)
   getProfile(userId?: string): Profile {
     const key = getUserStorageKey(STORAGE_KEYS.PROFILE, userId);
-    return safeGetItem<Profile>(key, DEFAULT_PROFILE);
+    const profile = safeGetItem<Profile>(key, DEFAULT_PROFILE);
+    if (
+      profile &&
+      profile.personalInfo &&
+      (profile.personalInfo.fullName === 'RUDRESH M' ||
+        profile.personalInfo.email === 'rudreshmanjunath15@gmail.com' ||
+        profile.personalInfo.phone === '+91 6364152219') &&
+      userId !== 'usr_001_demo'
+    ) {
+      const clean = createEmptyProfile(userId || '');
+      safeSetItem(key, clean);
+      return clean;
+    }
+    return profile;
   },
 
   cacheProfile(profile: Profile, userId?: string): void {
@@ -163,8 +177,9 @@ export const repository = {
 
   resetProfile(userId?: string): Profile {
     const key = getUserStorageKey(STORAGE_KEYS.PROFILE, userId);
-    safeSetItem(key, DEFAULT_PROFILE);
-    return DEFAULT_PROFILE;
+    const clean = createEmptyProfile(userId || '');
+    safeSetItem(key, clean);
+    return clean;
   },
 
   // Templates (Built-in + ATS styles)

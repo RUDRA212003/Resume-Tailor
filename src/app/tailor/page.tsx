@@ -83,31 +83,12 @@ function TailorPageContent() {
   // Multi-step workflow: 1: Input -> 2: Analysis & Review -> 3: Tailored Preview & Diff
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
-  // Step 1: Input Fields
-  const [companyName, setCompanyName] = useState('Stripe');
-  const [jobTitle, setJobTitle] = useState('Senior Backend Engineer');
-  const [jobLocation, setJobLocation] = useState('Remote / San Francisco, CA');
-  const [jobUrl, setJobUrl] = useState('https://stripe.com/jobs/backend-engineer');
-  const [rawText, setRawText] = useState(
-`About Stripe:
-We are looking for a Senior Backend Engineer to join our Core Financial Ledger squad.
-
-Key Responsibilities:
-• Design, implement, and maintain scalable microservices in Java and Spring Boot.
-• Write highly optimized SQL queries on transactional databases (PostgreSQL/MySQL) with ACID guarantees.
-• Build reliable, high-throughput RESTful APIs with comprehensive unit and integration testing.
-• Monitor production distributed systems, containerized deployments with Docker, and optimize Redis caching.
-
-Requirements:
-• 4+ years of professional software engineering experience.
-• Strong proficiency in Java, Spring Boot, and RESTful API architecture.
-• Deep experience with relational databases (PostgreSQL or MySQL) and query optimization.
-• Familiarity with Docker, Redis, and automated testing (JUnit/Jest).
-• B.S. or higher in Computer Science or equivalent.
-
-Nice to have:
-• Experience with payment systems, ledger infrastructure, or distributed event processing.`
-  );
+  // Step 1: Input Fields - start blank for user customization
+  const [companyName, setCompanyName] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [jobLocation, setJobLocation] = useState('');
+  const [jobUrl, setJobUrl] = useState('');
+  const [rawText, setRawText] = useState('');
 
   const [inputMode, setInputMode] = useState<'paste' | 'upload'>('paste');
   const [uploadWarning, setUploadWarning] = useState<string | null>(null);

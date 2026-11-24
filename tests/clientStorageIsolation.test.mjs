@@ -83,4 +83,15 @@ describe('Client Storage Multi-User Data Isolation Tests', () => {
     assert.deepEqual(repository.getJobDescriptions(), []);
     assert.deepEqual(repository.getApplications(), []);
   });
+
+  it('6. New user gets clean empty profile without legacy demo personal data', () => {
+    const newUser = 'auth0|new_user_clean_999';
+    repository.setActiveUserId(newUser);
+    const prof = repository.getProfile();
+    assert.equal(prof.personalInfo.fullName, '');
+    assert.equal(prof.personalInfo.phone, '');
+    assert.equal(prof.personalInfo.email, '');
+    assert.equal(prof.skills.length, 0);
+    assert.equal(prof.experiences.length, 0);
+  });
 });

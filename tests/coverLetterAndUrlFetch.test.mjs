@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCoverLetter } from '../src/lib/ai/coverLetterEngine.ts';
-import { DEFAULT_PROFILE } from '../src/lib/storage/defaultData.ts';
+import { MOCK_SAMPLE_PROFILE as DEFAULT_PROFILE } from '../src/lib/storage/defaultData.ts';
 
 test('Cover Letter Generation & API Suite', async (t) => {
   const profile = JSON.parse(JSON.stringify(DEFAULT_PROFILE));

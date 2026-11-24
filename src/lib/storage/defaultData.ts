@@ -84,7 +84,34 @@ export const BUILT_IN_TEMPLATES: ResumeTemplate[] = [
   },
 ];
 
-export const DEFAULT_PROFILE: Profile = {
+export function createEmptyProfile(userId = '', fullName = '', email = ''): Profile {
+  return {
+    id: userId ? `prof_${userId.replace(/[^a-zA-Z0-9]/g, '_')}` : 'prof_default',
+    userId: userId || 'default',
+    personalInfo: {
+      fullName: fullName || '',
+      email: email || '',
+      phone: '',
+      location: '',
+      linkedinUrl: '',
+      githubUrl: '',
+      portfolioUrl: '',
+      otherLinks: [],
+    },
+    summaries: [],
+    skills: [],
+    experiences: [],
+    projects: [],
+    education: [],
+    certifications: [],
+    achievements: [],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export const DEFAULT_PROFILE: Profile = createEmptyProfile('default', '', '');
+
+export const MOCK_SAMPLE_PROFILE: Profile = {
   id: 'profile-rudresh-m',
   userId: 'usr_001_demo',
   personalInfo: {

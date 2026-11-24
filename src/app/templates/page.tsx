@@ -25,12 +25,17 @@ export default function TemplatesPage() {
   const [selectedPreview, setSelectedPreview] = useState<ResumeTemplate | null>(BUILT_IN_TEMPLATES[0]);
   const [isUploading, setIsUploading] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ResumeTemplate | null>(null);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
     const list = repository.getTemplates();
     setTemplates(list);
     setSelectedPreview(list.find((t) => t.isDefault) || list[0]);
+    try {
+      const p = repository.getProfile();
+      if (p && p.personalInfo) setProfile(p);
+    } catch {}
   }, []);
 
   const handleSetDefault = (id: string) => {
@@ -227,9 +232,17 @@ export default function TemplatesPage() {
                         : 'border-b pb-2 text-left'
                     }
                   >
-                    <p className="font-bold text-xs text-[#1D1D1F]">RUDRESH M</p>
+                    <p className="font-bold text-xs text-[#1D1D1F]">
+                      {profile?.personalInfo?.fullName || 'Candidate Name'}
+                    </p>
                     <p className="text-[#666666] text-[9px] mt-0.5">
-                      Bangalore, India • +91 6364152219 • rudreshmanjunath15@gmail.com
+                      {[
+                        profile?.personalInfo?.location || 'San Francisco, CA',
+                        profile?.personalInfo?.phone || '+1 (555) 000-0000',
+                        profile?.personalInfo?.email || 'candidate@example.com',
+                      ]
+                        .filter(Boolean)
+                        .join(' • ')}
                     </p>
                   </div>
 

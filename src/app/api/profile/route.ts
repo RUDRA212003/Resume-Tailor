@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = (await req.json()) as Profile;
-    if (!body || !body.personalInfo?.fullName) {
+    if (!body || !body.personalInfo || typeof body.personalInfo.fullName !== 'string') {
       return NextResponse.json({ error: 'Invalid profile data provided.' }, { status: 400 });
     }
 

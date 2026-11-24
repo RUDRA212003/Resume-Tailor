@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { generateResumeDocx } from '../src/lib/export/docxGenerator';
 import { parseResumeTextToProfile } from '../src/lib/parser/documentParser';
-import { DEFAULT_PROFILE, BUILT_IN_TEMPLATES } from '../src/lib/storage/defaultData';
+import { MOCK_SAMPLE_PROFILE as DEFAULT_PROFILE, BUILT_IN_TEMPLATES } from '../src/lib/storage/defaultData';
 
 test('Document Processing & Generation Suite', async (t) => {
   const profile = JSON.parse(JSON.stringify(DEFAULT_PROFILE));

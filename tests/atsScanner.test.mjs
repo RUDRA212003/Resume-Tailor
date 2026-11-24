@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { scanResumeForAts } from '../src/lib/ai/atsScanner.ts';
 import { validateTailoredResume } from '../src/lib/verification/factChecker.ts';
-import { DEFAULT_PROFILE } from '../src/lib/storage/defaultData.ts';
+import { MOCK_SAMPLE_PROFILE as DEFAULT_PROFILE } from '../src/lib/storage/defaultData.ts';
 
 test('ATS Friendly Scanner & JD Skills Override Suite', async (t) => {
   const dummyProfile = JSON.parse(JSON.stringify(DEFAULT_PROFILE));

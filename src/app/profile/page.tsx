@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { repository } from '@/lib/storage/repository';
-import { DEFAULT_PROFILE } from '@/lib/storage/defaultData';
+import { DEFAULT_PROFILE, createEmptyProfile } from '@/lib/storage/defaultData';
 import { haptics } from '@/lib/haptics';
 import {
   Profile,
@@ -39,6 +39,7 @@ import {
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
+  const [savedSnapshot, setSavedSnapshot] = useState<string>('');
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<
     'personal' | 'summary' | 'skills' | 'experience' | 'projects' | 'education' | 'certifications'
@@ -54,17 +55,68 @@ export default function ProfilePage() {
     setMounted(true);
     const local = repository.getProfile();
     setProfile(local);
+    setSavedSnapshot(JSON.stringify(local));
 
     fetch('/api/profile')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data && data.personalInfo && data.personalInfo.fullName === 'RUDRESH M') {
-          setProfile(data);
-          repository.cacheProfile(data);
+        if (data && data.personalInfo) {
+          // If legacy demo profile ("RUDRESH M"), sanitize to clean empty profile
+          if (
+            (data.personalInfo.fullName === 'RUDRESH M' ||
+              data.personalInfo.email === 'rudreshmanjunath15@gmail.com' ||
+              data.personalInfo.phone === '+91 6364152219') &&
+            data.userId !== 'usr_001_demo'
+          ) {
+            const clean = createEmptyProfile(data.userId || '');
+            setProfile(clean);
+            repository.cacheProfile(clean);
+            setSavedSnapshot(JSON.stringify(clean));
+          } else {
+            setProfile(data);
+            repository.cacheProfile(data);
+            setSavedSnapshot(JSON.stringify(data));
+          }
         }
       })
       .catch((err) => console.log('Loaded from local cache:', err));
   }, []);
+
+  const isDirty = mounted && savedSnapshot !== '' && JSON.stringify(profile) !== savedSnapshot;
+
+  // Intercept window unload when unsaved changes exist
+  useEffect(() => {
+    if (!isDirty) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'You have unsaved profile changes! Please save your changes before leaving.';
+      return e.returnValue;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  // Intercept in-app navigation link clicks when unsaved changes exist
+  useEffect(() => {
+    if (!isDirty) return;
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('a');
+      if (!target) return;
+      const href = target.getAttribute('href');
+      if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+
+      const confirmed = window.confirm(
+        'You have unsaved changes in your profile!\n\nClick "Cancel" to stay on this page and save your details, or "OK" to discard and leave.'
+      );
+      if (!confirmed) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    document.addEventListener('click', handleLinkClick, true);
+    return () => document.removeEventListener('click', handleLinkClick, true);
+  }, [isDirty]);
 
   // Skill Add Modal State
   const [isAddingSkill, setIsAddingSkill] = useState(false);
@@ -111,6 +163,14 @@ export default function ProfilePage() {
   const [projBulletInput, setProjBulletInput] = useState('');
 
   const handleSave = async () => {
+    if (!profile.personalInfo.fullName.trim()) {
+      setActiveTab('personal');
+      setSaveStatus({
+        type: 'warning',
+        message: 'Please enter your Full Name in Personal Info before saving.',
+      });
+      return;
+    }
     haptics.light();
     setIsSaving(true);
     repository.saveProfile(profile);
@@ -119,6 +179,7 @@ export default function ProfilePage() {
       const res = await repository.syncProfileToDb(profile);
       if (res.success) {
         haptics.success();
+        setSavedSnapshot(JSON.stringify(profile));
         setSaveStatus({
           type: 'success',
           message: 'Saved & synchronized with MongoDB Atlas!',
@@ -129,6 +190,9 @@ export default function ProfilePage() {
           type: 'warning',
           message: res.error || 'Saved to local cache. Database write was not confirmed.',
         });
+        if (res.data) {
+          setSavedSnapshot(JSON.stringify(profile));
+        }
       }
     } catch (err: any) {
       haptics.warning();
@@ -294,6 +358,41 @@ export default function ProfilePage() {
   return (
     <AppLayout>
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Sticky Unsaved Changes Notification Banner */}
+        {isDirty && (
+          <div className="sticky top-4 z-40 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white px-5 py-3.5 rounded-xl shadow-lg border border-amber-400 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 text-white animate-pulse" />
+              <div>
+                <p className="font-semibold text-sm">Unsaved Profile Changes Detected</p>
+                <p className="text-xs text-amber-100">
+                  You have modified your profile. Make sure to click &quot;Save Changes Now&quot; so your details are preserved in MongoDB for future logins.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  if (savedSnapshot) {
+                    setProfile(JSON.parse(savedSnapshot));
+                  }
+                }}
+                className="px-3 py-1.5 text-xs font-medium bg-amber-800/60 hover:bg-amber-800 text-white rounded-lg transition-colors"
+              >
+                Discard
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-4 py-1.5 text-xs font-semibold bg-white text-amber-900 hover:bg-amber-50 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {isSaving ? 'Saving...' : 'Save Changes Now'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Top Header & Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-[#E5E5E7] p-6 rounded-xl shadow-apple-card">
           <div>
@@ -333,6 +432,7 @@ export default function ProfilePage() {
                     if (data && data.personalInfo) {
                       setProfile(data);
                       repository.cacheProfile(data);
+                      setSavedSnapshot(JSON.stringify(data));
                       setSaveStatus({
                         type: 'success',
                         message: 'Profile refreshed from MongoDB Atlas!',
@@ -354,12 +454,12 @@ export default function ProfilePage() {
                 setProfile(reset);
                 setSaveStatus({
                   type: 'warning',
-                  message: 'Reset locally to verified resume data. Click Save Changes to sync.',
+                  message: 'Reset to clean profile. Click Save Changes to synchronize.',
                 });
                 setTimeout(() => setSaveStatus({ type: 'idle', message: '' }), 4000);
               }}
             >
-              Reset to Resume
+              Reset to Clean
             </Button>
 
             {saveStatus.type !== 'idle' && (

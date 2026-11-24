@@ -44,7 +44,7 @@ export async function generateCoverLetter(
   const role = jd.jobTitle.trim() || 'Software Engineer';
   const location = jd.location?.trim() || 'Engineering Operations';
 
-  const candidateName = profile.personalInfo.fullName.trim() || 'RUDRESH M';
+  const candidateName = profile.personalInfo.fullName.trim() || 'Candidate';
   const candidateEmail = profile.personalInfo.email.trim();
   const candidatePhone = profile.personalInfo.phone.trim();
   const candidateLinkedin = profile.personalInfo.linkedinUrl?.trim();

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateTailoredResume } from '../src/lib/ai/tailorEngine';
-import { DEFAULT_PROFILE, BUILT_IN_TEMPLATES } from '../src/lib/storage/defaultData';
+import { MOCK_SAMPLE_PROFILE as DEFAULT_PROFILE, BUILT_IN_TEMPLATES } from '../src/lib/storage/defaultData';
 
 test('JD Adaptive Tailoring Engine Suite', async (t) => {
   const profile = JSON.parse(JSON.stringify(DEFAULT_PROFILE));

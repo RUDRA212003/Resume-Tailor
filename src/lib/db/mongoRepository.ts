@@ -9,7 +9,7 @@ import {
   ApplicationHistoryItem,
   UserRole,
 } from '@/types';
-import { DEFAULT_PROFILE, BUILT_IN_TEMPLATES } from '../storage/defaultData';
+import { DEFAULT_PROFILE, createEmptyProfile, BUILT_IN_TEMPLATES } from '../storage/defaultData';
 
 // In-memory isolated store used when MongoDB is offline, unconfigured, or in unit tests
 class MemoryIsolatedStore {
@@ -61,17 +61,7 @@ async function ensureIndexes() {
 }
 
 function createDefaultUserProfile(userId: string, name?: string, email?: string): Profile {
-  return {
-    ...DEFAULT_PROFILE,
-    id: `prof_${userId.replace(/[^a-zA-Z0-9]/g, '_')}`,
-    userId,
-    personalInfo: {
-      ...DEFAULT_PROFILE.personalInfo,
-      fullName: name || 'Professional Candidate',
-      email: email || '',
-    },
-    updatedAt: new Date().toISOString(),
-  };
+  return createEmptyProfile(userId, name || '', email || '');
 }
 
 export const mongoRepository = {
@@ -176,7 +166,20 @@ export const mongoRepository = {
   async getProfile(userId: string, userName?: string, userEmail?: string): Promise<Profile> {
     if (!isMongoConfigured()) {
       const existing = memoryStore.profiles.get(userId);
-      if (existing) return existing;
+      if (existing) {
+        if (
+          existing.personalInfo &&
+          (existing.personalInfo.fullName === 'RUDRESH M' ||
+            existing.personalInfo.email === 'rudreshmanjunath15@gmail.com' ||
+            existing.personalInfo.phone === '+91 6364152219') &&
+          userId !== 'usr_001_demo'
+        ) {
+          const cleaned = createDefaultUserProfile(userId, userName, userEmail);
+          memoryStore.profiles.set(userId, cleaned);
+          return cleaned;
+        }
+        return existing;
+      }
       const initial = createDefaultUserProfile(userId, userName, userEmail);
       memoryStore.profiles.set(userId, initial);
       return initial;
@@ -193,6 +196,20 @@ export const mongoRepository = {
         await coll.insertOne(initial);
         return initial;
       }
+
+      // Sanitize legacy demo data if account was seeded with demo data
+      if (
+        doc.personalInfo &&
+        (doc.personalInfo.fullName === 'RUDRESH M' ||
+          doc.personalInfo.email === 'rudreshmanjunath15@gmail.com' ||
+          doc.personalInfo.phone === '+91 6364152219') &&
+        userId !== 'usr_001_demo'
+      ) {
+        const cleaned = createDefaultUserProfile(userId, userName, userEmail);
+        await coll.updateOne({ userId }, { $set: cleaned }, { upsert: true });
+        return cleaned;
+      }
+
       return doc;
     } catch (err) {
       console.error('Mongo getProfile error:', err);
