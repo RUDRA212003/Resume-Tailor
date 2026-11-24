@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateTailoredResume } from '../src/lib/ai/tailorEngine';
+import { extractYearsOfExperience, analyzeJobDescription } from '../src/lib/ai/jdAnalyzer';
 import { MOCK_SAMPLE_PROFILE as DEFAULT_PROFILE, BUILT_IN_TEMPLATES } from '../src/lib/storage/defaultData';
 
 test('JD Adaptive Tailoring Engine Suite', async (t) => {
@@ -139,5 +140,61 @@ test('JD Adaptive Tailoring Engine Suite', async (t) => {
 
     // Validation must pass 100%
     assert.equal(tailored.validationReport.isValid, true);
+  });
+
+  await t.test('3. Extracts required years of experience accurately from job description text', () => {
+    // Range format
+    const resRange = extractYearsOfExperience(
+      'We are looking for a Software Engineer with 3-5 years of hands-on experience in Java and Spring Boot.'
+    );
+    assert.equal(resRange.experienceRequired, '3–5 years of experience');
+    assert.equal(resRange.yearsOfExperienceRequired, 3);
+
+    // Plus format
+    const resPlus = extractYearsOfExperience(
+      'Requirements: Minimum 4+ years of professional industry software engineering experience.'
+    );
+    assert.equal(resPlus.experienceRequired, '4+ years of experience');
+    assert.equal(resPlus.yearsOfExperienceRequired, 4);
+
+    // Fresher / Entry Level format
+    const resFresher = extractYearsOfExperience(
+      'Exciting opportunity for freshers and entry level graduates with strong CS fundamentals.'
+    );
+    assert.equal(resFresher.experienceRequired, '0–1 years (Fresher / Entry Level)');
+    assert.equal(resFresher.yearsOfExperienceRequired, 0);
+
+    // Senior keyword inference when no explicit number
+    const resSenior = extractYearsOfExperience(
+      'Seeking a Principal Lead Architect to spearhead cloud infrastructure.'
+    );
+    assert.equal(resSenior.experienceRequired, '5+ years (Senior / Lead level expected)');
+    assert.equal(resSenior.yearsOfExperienceRequired, 5);
+
+    // Unspecified fallback
+    const resUnspecified = extractYearsOfExperience(
+      'Great company culture, dynamic fast-paced team looking for passionate contributors.'
+    );
+    assert.equal(resUnspecified.experienceRequired, 'Not explicitly specified (Flexible)');
+    assert.equal(resUnspecified.yearsOfExperienceRequired, null);
+  });
+
+  await t.test('4. JD Analysis attaches experienceRequired to analysis output', async () => {
+    const jd = {
+      id: 'jd-test-exp',
+      companyName: 'Cloud Solutions Ltd',
+      jobTitle: 'Backend Engineer',
+      rawText: 'Looking for a Backend Developer with 2-4 years of experience in Node.js, TypeScript, and AWS.',
+      sourceType: 'paste',
+      createdAt: '2026-01-01',
+    };
+
+    const analysis = await analyzeJobDescription(jd, profile);
+    assert.ok(analysis.experienceRequired, 'analysis.experienceRequired must be present');
+    assert.ok(
+      analysis.experienceRequired.includes('2–4') || analysis.experienceRequired.includes('2-4') || analysis.experienceRequired.includes('2'),
+      'Experience required should reflect the 2-4 years requirement'
+    );
+    assert.equal(analysis.yearsOfExperienceRequired, 2);
   });
 });

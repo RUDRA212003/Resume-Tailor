@@ -26,6 +26,7 @@ import {
   Sparkles,
   Upload,
   FileText,
+  Briefcase,
   Building,
   CheckCircle2,
   AlertTriangle,
@@ -984,6 +985,12 @@ function TailorPageContent() {
                     <Badge variant="info" size="sm">
                       {currentJd?.jobTitle} at {currentJd?.companyName}
                     </Badge>
+                    {analysis.experienceRequired && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-50 border border-blue-200 text-[#0066CC] rounded-full text-[11px] font-semibold">
+                        <Briefcase className="w-3 h-3 text-[#0066CC]" />
+                        <span>Experience Asked: {analysis.experienceRequired}</span>
+                      </span>
+                    )}
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-full text-[11px] font-semibold">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       ✨ Gemini AI Active
@@ -1005,8 +1012,40 @@ function TailorPageContent() {
                 </div>
               </div>
 
+              {/* Years of Experience Asked Highlight Banner */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-white/95 border border-[#0066CC]/25 rounded-xl shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0066CC] to-[#004C99] flex items-center justify-center text-white shadow-xs shrink-0">
+                    <Briefcase className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#0066CC]">
+                      Years of Experience Required by Employer
+                    </p>
+                    <p className="text-base font-bold text-[#1D1D1F]">
+                      {analysis.experienceRequired || 'Not explicitly specified (Flexible requirement)'}
+                    </p>
+                  </div>
+                </div>
+                {analysis.yearsOfExperienceRequired !== undefined && analysis.yearsOfExperienceRequired !== null && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold self-start sm:self-center">
+                    <span>
+                      {analysis.yearsOfExperienceRequired === 0
+                        ? 'Fresher / Entry Level Position'
+                        : `${analysis.yearsOfExperienceRequired}+ Years Industry Experience Expected`}
+                    </span>
+                  </div>
+                )}
+              </div>
+
               {/* Breakdown metrics */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-[#E5E5E7]">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2 border-t border-[#E5E5E7]">
+                <div className="bg-white p-2.5 rounded-lg border border-blue-200 bg-blue-50/20 col-span-2 sm:col-span-1">
+                  <p className="text-[10px] font-semibold text-[#0066CC]">Exp Asked</p>
+                  <p className="text-sm font-bold text-[#1D1D1F] truncate" title={analysis.experienceRequired}>
+                    {analysis.experienceRequired ? analysis.experienceRequired.replace(/ of experience/i, '') : 'Flexible'}
+                  </p>
+                </div>
                 <div className="bg-white p-2.5 rounded-lg border border-[#E5E5E7]">
                   <p className="text-[10px] text-[#555555]">Skills Match</p>
                   <p className="text-base font-bold text-[#1D1D1F]">

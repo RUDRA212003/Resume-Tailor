@@ -17,6 +17,93 @@ const KNOWN_TECH_KEYWORDS = [
 ];
 
 /**
+ * Analyzes and extracts required years of experience from job description text.
+ */
+export function extractYearsOfExperience(jdText: string): {
+  experienceRequired: string;
+  yearsOfExperienceRequired: number | null;
+} {
+  const text = (jdText || '').replace(/\r\n/g, '\n');
+
+  // 1. Fresher / Entry Level / New Grad check
+  if (
+    /\b(fresher|freshers|entry[-\s]level|new\s+grad(?:uate)?s?|college\s+grad(?:uate)?s?|internship|interns?|no\s+prior\s+experience)\b/i.test(
+      text
+    )
+  ) {
+    return {
+      experienceRequired: '0–1 years (Fresher / Entry Level)',
+      yearsOfExperienceRequired: 0,
+    };
+  }
+
+  // 2. Explicit range with years: e.g. "3-5 years of experience", "2 to 4 yrs of relevant experience"
+  const rangeMatch = text.match(
+    /\b(?:minimum|at least|min\.?)?\s*(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)\+?\s*(?:years?|yrs?)(?:\s+of)?(?:\s+(?:relevant|hands-on|professional|work|software|industry|engineering|total|development))*\s*(?:experience|exp)?\b/i
+  );
+  if (rangeMatch && rangeMatch[1] && rangeMatch[2]) {
+    const min = parseFloat(rangeMatch[1]);
+    const max = parseFloat(rangeMatch[2]);
+    return {
+      experienceRequired: `${min}–${max} years of experience`,
+      yearsOfExperienceRequired: min,
+    };
+  }
+
+  // 3. Minimum / X+ years: e.g. "5+ years of experience", "minimum 3 years of experience", "at least 4 years"
+  const plusMatch = text.match(
+    /\b(?:minimum|at least|min\.?)?\s*(\d+(?:\.\d+)?)\+?\s*(?:years?|yrs?)(?:\s+of)?(?:\s+(?:relevant|hands-on|professional|work|software|industry|engineering|total|development))*\s*(?:experience|exp)\b/i
+  );
+  if (plusMatch && plusMatch[1]) {
+    const years = parseFloat(plusMatch[1]);
+    return {
+      experienceRequired: `${years}+ years of experience`,
+      yearsOfExperienceRequired: years,
+    };
+  }
+
+  // 4. Standalone "X+ years" or "X years" in qualification lines
+  const qualLine = text
+    .split('\n')
+    .find((l) => /(?:requirement|qualification|experience|eligibility|background)/i.test(l) && /\b\d+\+?\s*(?:years?|yrs?)\b/i.test(l));
+  if (qualLine) {
+    const m = qualLine.match(/(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)\s*(?:years?|yrs?)/i);
+    if (m && m[1] && m[2]) {
+      return {
+        experienceRequired: `${m[1]}–${m[2]} years of experience`,
+        yearsOfExperienceRequired: parseFloat(m[1]),
+      };
+    }
+    const m2 = qualLine.match(/(\d+(?:\.\d+)?)\+?\s*(?:years?|yrs?)/i);
+    if (m2 && m2[1]) {
+      return {
+        experienceRequired: `${m2[1]}+ years of experience`,
+        yearsOfExperienceRequired: parseFloat(m2[1]),
+      };
+    }
+  }
+
+  // 5. Seniority keywords inference fallback
+  if (/\b(senior|sr\.|lead|architect|principal|staff)\b/i.test(text)) {
+    return {
+      experienceRequired: '5+ years (Senior / Lead level expected)',
+      yearsOfExperienceRequired: 5,
+    };
+  }
+  if (/\b(junior|jr\.|associate)\b/i.test(text)) {
+    return {
+      experienceRequired: '1–3 years (Junior / Associate level)',
+      yearsOfExperienceRequired: 1,
+    };
+  }
+
+  return {
+    experienceRequired: 'Not explicitly specified (Flexible)',
+    yearsOfExperienceRequired: null,
+  };
+}
+
+/**
  * Analyzes a job description against the candidate's profile.
  * Extracts required/preferred skills, responsibilities, qualifications, and evaluates match status.
  */
@@ -45,6 +132,8 @@ ${Array.from(groundTruth.verifiedSkillNames).join(', ')}
 Respond ONLY with a valid JSON object matching this schema:
 {
   "roleSummary": "Short 2-sentence summary of what this role seeks",
+  "experienceRequired": "e.g. '3-5 years', '2+ years', 'Fresher / Entry Level', or 'Not explicitly specified'",
+  "yearsOfExperienceRequired": 3,
   "requiredSkills": [
     { "name": "Skill name", "category": "Programming Languages|Frontend Technologies|Backend Technologies|Databases|Frameworks and Libraries|Developer Tools|Cloud Platforms|Testing Tools|Other Skills" }
   ],
@@ -69,7 +158,7 @@ Respond ONLY with a valid JSON object matching this schema:
       const responseText = response.text?.trim() || '{}';
       const parsed = JSON.parse(responseText);
 
-      return buildJDAnalysisFromParsedData(jd.id, parsed, profile, groundTruth);
+      return buildJDAnalysisFromParsedData(jd.id, parsed, profile, groundTruth, jd.rawText);
     } catch (error) {
       console.warn('Gemini analysis failed or rate-limited, using rule-based extraction engine:', error);
     }
@@ -133,6 +222,8 @@ function buildJDAnalysisFromParsedData(
   jdId: string,
   data: {
     roleSummary?: string;
+    experienceRequired?: string;
+    yearsOfExperienceRequired?: number | null;
     requiredSkills?: { name: string; category?: string }[];
     preferredSkills?: { name: string; category?: string }[];
     responsibilities?: string[];
@@ -140,8 +231,22 @@ function buildJDAnalysisFromParsedData(
     keywords?: string[];
   },
   profile: Profile,
-  groundTruth: ReturnType<typeof extractGroundTruth>
+  groundTruth: ReturnType<typeof extractGroundTruth>,
+  jdRawText?: string
 ): JDAnalysis {
+  const extractedExp = extractYearsOfExperience(jdRawText || '');
+  const experienceRequired =
+    data.experienceRequired &&
+    data.experienceRequired.trim() &&
+    !data.experienceRequired.toLowerCase().includes('not explicitly')
+      ? data.experienceRequired.trim()
+      : extractedExp.experienceRequired;
+
+  const yearsOfExperienceRequired =
+    typeof data.yearsOfExperienceRequired === 'number'
+      ? data.yearsOfExperienceRequired
+      : extractedExp.yearsOfExperienceRequired;
+
   const reqSkills: AnalyzedSkillRequirement[] = (data.requiredSkills || []).map((s) => {
     const match = matchSkillAgainstProfile(s.name, groundTruth);
     return {
@@ -217,6 +322,8 @@ function buildJDAnalysisFromParsedData(
     roleSummary:
       data.roleSummary ||
       'Technical role requiring strong software engineering fundamentals, database experience, and production API design.',
+    experienceRequired,
+    yearsOfExperienceRequired,
     requiredSkills: reqSkills,
     preferredSkills: prefSkills,
     responsibilities: data.responsibilities || [
@@ -248,6 +355,7 @@ function extractAndAnalyzeLocally(
   groundTruth: ReturnType<typeof extractGroundTruth>
 ): JDAnalysis {
   const jdText = jd.rawText;
+  const expInfo = extractYearsOfExperience(jdText);
 
   // Detect which known tech keywords are in the JD text
   const foundKeywords: string[] = [];
@@ -279,6 +387,8 @@ function extractAndAnalyzeLocally(
     jd.id,
     {
       roleSummary: `Seeking a software engineer to build and scale production systems with emphasis on ${foundKeywords.slice(0, 4).join(', ')}.`,
+      experienceRequired: expInfo.experienceRequired,
+      yearsOfExperienceRequired: expInfo.yearsOfExperienceRequired,
       requiredSkills: reqSkillsList.map((name) => ({ name, category: 'Technical Skills' })),
       preferredSkills: prefSkillsList.map((name) => ({ name, category: 'Technical Skills' })),
       responsibilities: responsibilities.length > 0 ? responsibilities : [
@@ -293,6 +403,7 @@ function extractAndAnalyzeLocally(
       keywords: foundKeywords.slice(0, 8),
     },
     profile,
-    groundTruth
+    groundTruth,
+    jd.rawText
   );
 }

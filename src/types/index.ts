@@ -181,6 +181,8 @@ export interface JDAnalysis {
   id: string;
   jobDescriptionId: string;
   roleSummary: string;
+  experienceRequired?: string; // e.g. "3-5 years", "2+ years", "Fresher / Entry level"
+  yearsOfExperienceRequired?: number | null; // e.g. 3, 5, 0 (or null if not specified)
   requiredSkills: AnalyzedSkillRequirement[];
   preferredSkills: AnalyzedSkillRequirement[];
   responsibilities: string[];
