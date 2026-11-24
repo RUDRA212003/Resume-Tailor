@@ -15,6 +15,7 @@ import {
   SKILL_CATEGORIES,
   SkillItem,
   ExperienceItem,
+  ExperienceBullet,
   ProjectItem,
   EducationItem,
   CertificationItem,
@@ -146,6 +147,8 @@ export default function ProfilePage() {
   const [expTechInput, setExpTechInput] = useState('');
   const [respInput, setRespInput] = useState('');
   const [achInput, setAchInput] = useState('');
+  const [activeExpBulletAddId, setActiveExpBulletAddId] = useState<string | null>(null);
+  const [inlineBulletText, setInlineBulletText] = useState('');
 
   // Project Add Modal State
   const [isAddingProj, setIsAddingProj] = useState(false);
@@ -160,6 +163,8 @@ export default function ProfilePage() {
   });
   const [projTechInput, setProjTechInput] = useState('');
   const [projBulletInput, setProjBulletInput] = useState('');
+  const [activeProjBulletAddId, setActiveProjBulletAddId] = useState<string | null>(null);
+  const [inlineProjBulletText, setInlineProjBulletText] = useState('');
 
   // Education Add Modal State
   const [isAddingEdu, setIsAddingEdu] = useState(false);
@@ -277,6 +282,29 @@ export default function ProfilePage() {
   // Experience Handlers
   const addExperience = () => {
     if (!newExp.company || !newExp.jobTitle) return;
+
+    // Parse responsibilities from textarea (line by line or bullet by bullet)
+    const rawRespLines = respInput
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const responsibilities: ExperienceBullet[] = rawRespLines.map((line, idx) => ({
+      id: `fact-resp-${Date.now()}-${idx + 1}`,
+      text: line.replace(/^[-•*]\s*/, '').trim(),
+      isVerified: true,
+    }));
+
+    // Parse achievements if provided
+    const rawAchLines = achInput
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const achievements: ExperienceBullet[] = rawAchLines.map((line, idx) => ({
+      id: `fact-ach-${Date.now()}-${idx + 1}`,
+      text: line.replace(/^[-•*]\s*/, '').trim(),
+      isVerified: true,
+    }));
+
     const item: ExperienceItem = {
       id: `exp-${Date.now()}`,
       company: newExp.company.trim(),
@@ -290,8 +318,8 @@ export default function ProfilePage() {
         .split(',')
         .map((t) => t.trim())
         .filter(Boolean),
-      responsibilities: newExp.responsibilities || [],
-      achievements: newExp.achievements || [],
+      responsibilities: responsibilities.length > 0 ? responsibilities : (newExp.responsibilities || []),
+      achievements: achievements.length > 0 ? achievements : (newExp.achievements || []),
       isVerified: true,
     };
     const updated = {
@@ -303,6 +331,8 @@ export default function ProfilePage() {
     setIsAddingExp(false);
     setNewExp({ company: '', jobTitle: '', employmentType: 'Full-time', responsibilities: [], achievements: [] });
     setExpTechInput('');
+    setRespInput('');
+    setAchInput('');
   };
 
   const removeExperience = (id: string) => {
@@ -314,9 +344,56 @@ export default function ProfilePage() {
     repository.saveProfile(updated);
   };
 
+  const addExperienceBullet = (expId: string, text: string) => {
+    if (!text.trim()) return;
+    const bullet: ExperienceBullet = {
+      id: `fact-resp-${Date.now()}`,
+      text: text.trim().replace(/^[-•*]\s*/, ''),
+      isVerified: true,
+    };
+    const updated = {
+      ...profile,
+      experiences: profile.experiences.map((exp) =>
+        exp.id === expId
+          ? { ...exp, responsibilities: [...exp.responsibilities, bullet] }
+          : exp
+      ),
+    };
+    setProfile(updated);
+    repository.saveProfile(updated);
+  };
+
+  const removeExperienceBullet = (expId: string, bulletId: string) => {
+    const updated = {
+      ...profile,
+      experiences: profile.experiences.map((exp) =>
+        exp.id === expId
+          ? {
+              ...exp,
+              responsibilities: exp.responsibilities.filter((r) => r.id !== bulletId),
+              achievements: exp.achievements.filter((a) => a.id !== bulletId),
+            }
+          : exp
+      ),
+    };
+    setProfile(updated);
+    repository.saveProfile(updated);
+  };
+
   // Project Handlers
   const addProject = () => {
     if (!newProj.title) return;
+
+    const rawBulletLines = projBulletInput
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const bullets = rawBulletLines.map((line, idx) => ({
+      id: `proj-b-${Date.now()}-${idx + 1}`,
+      text: line.replace(/^[-•*]\s*/, '').trim(),
+      isVerified: true,
+    }));
+
     const item: ProjectItem = {
       id: `proj-${Date.now()}`,
       title: newProj.title.trim(),
@@ -325,7 +402,7 @@ export default function ProfilePage() {
       githubUrl: newProj.githubUrl,
       liveUrl: newProj.liveUrl,
       duration: newProj.duration,
-      bullets: newProj.bullets || [],
+      bullets: bullets.length > 0 ? bullets : (newProj.bullets || []),
       achievements: newProj.achievements || [],
       keywords: [],
       isVerified: true,
@@ -339,12 +416,45 @@ export default function ProfilePage() {
     setIsAddingProj(false);
     setNewProj({ title: '', description: '', bullets: [], achievements: [] });
     setProjTechInput('');
+    setProjBulletInput('');
   };
 
   const removeProject = (id: string) => {
     const updated = {
       ...profile,
       projects: profile.projects.filter((p) => p.id !== id),
+    };
+    setProfile(updated);
+    repository.saveProfile(updated);
+  };
+
+  const addProjectBullet = (projId: string, text: string) => {
+    if (!text.trim()) return;
+    const bullet = {
+      id: `proj-b-${Date.now()}`,
+      text: text.trim().replace(/^[-•*]\s*/, ''),
+      isVerified: true,
+    };
+    const updated = {
+      ...profile,
+      projects: profile.projects.map((proj) =>
+        proj.id === projId
+          ? { ...proj, bullets: [...(proj.bullets || []), bullet] }
+          : proj
+      ),
+    };
+    setProfile(updated);
+    repository.saveProfile(updated);
+  };
+
+  const removeProjectBullet = (projId: string, bulletId: string) => {
+    const updated = {
+      ...profile,
+      projects: profile.projects.map((proj) =>
+        proj.id === projId
+          ? { ...proj, bullets: (proj.bullets || []).filter((b) => b.id !== bulletId) }
+          : proj
+      ),
     };
     setProfile(updated);
     repository.saveProfile(updated);
@@ -1211,6 +1321,35 @@ export default function ProfilePage() {
                       className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
                     />
                   </div>
+
+                  <div className="sm:col-span-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[11px] font-medium text-[#555555]">
+                        Responsibilities & Work Tasks (one per line)
+                      </label>
+                      <span className="text-[10px] text-[#888888]">Press Enter for each bullet</span>
+                    </div>
+                    <textarea
+                      rows={4}
+                      placeholder="- Developed scalable REST microservices using Java & Spring Boot&#10;- Optimized PostgreSQL database queries, reducing latency by 40%&#10;- Implemented CI/CD pipelines with Docker and GitHub Actions"
+                      value={respInput}
+                      onChange={(e) => setRespInput(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-white border border-[#E5E5E7] rounded-lg leading-relaxed focus:border-[#0066CC] outline-none"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-medium text-[#555555] mb-1">
+                      Key Achievements (Optional, one per line)
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="- Awarded Employee of the Month for successful cloud migration&#10;- Reduced infrastructure costs by 25%"
+                      value={achInput}
+                      onChange={(e) => setAchInput(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-white border border-[#E5E5E7] rounded-lg leading-relaxed focus:border-[#0066CC] outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -1259,35 +1398,114 @@ export default function ProfilePage() {
                   </div>
 
                   {/* Technologies */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {exp.technologies.map((t) => (
-                      <span
-                        key={t}
-                        className="text-[11px] bg-[#F5F5F7] px-2 py-0.5 rounded text-[#1D1D1F] border border-[#E5E5E7]"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
+                  {exp.technologies.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {exp.technologies.map((t) => (
+                        <span
+                          key={t}
+                          className="text-[11px] bg-[#F5F5F7] px-2 py-0.5 rounded text-[#1D1D1F] border border-[#E5E5E7]"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Responsibilities list */}
                   <div className="space-y-2">
-                    <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#555555]">
-                      Responsibilities ({exp.responsibilities.length})
-                    </h4>
-                    <ul className="space-y-2">
-                      {exp.responsibilities.map((r) => (
-                        <li
-                          key={r.id}
-                          className="text-xs text-[#333333] flex items-start gap-2 bg-[#FBFBFC] p-2.5 rounded-lg border border-[#E5E5E7]/50"
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#555555]">
+                        Responsibilities ({exp.responsibilities.length})
+                      </h4>
+                      {activeExpBulletAddId !== exp.id && (
+                        <button
+                          onClick={() => {
+                            setActiveExpBulletAddId(exp.id);
+                            setInlineBulletText('');
+                          }}
+                          className="text-[11px] text-[#0066CC] hover:underline flex items-center gap-1 font-medium"
                         >
-                          <span className="text-[#0066CC] font-mono text-[10px] bg-[#F0F7FF] px-1 py-0.5 rounded border border-[#0066CC]/20 shrink-0">
-                            {r.id}
-                          </span>
-                          <span className="leading-relaxed">{r.text}</span>
-                        </li>
-                      ))}
-                    </ul>
+                          <Plus className="w-3 h-3" />
+                          Add Responsibility
+                        </button>
+                      )}
+                    </div>
+
+                    {activeExpBulletAddId === exp.id && (
+                      <div className="p-3 bg-[#F0F7FF] border border-[#0066CC]/30 rounded-lg space-y-2">
+                        <textarea
+                          rows={2}
+                          placeholder="Enter responsibility or task description..."
+                          value={inlineBulletText}
+                          onChange={(e) => setInlineBulletText(e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg outline-none focus:border-[#0066CC]"
+                          autoFocus
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setActiveExpBulletAddId(null);
+                              setInlineBulletText('');
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              if (inlineBulletText.trim()) {
+                                addExperienceBullet(exp.id, inlineBulletText);
+                                setActiveExpBulletAddId(null);
+                                setInlineBulletText('');
+                              }
+                            }}
+                          >
+                            Add Bullet
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {exp.responsibilities.length === 0 && activeExpBulletAddId !== exp.id ? (
+                      <div className="p-3 bg-[#FBFBFC] rounded-lg border border-dashed border-[#D2D2D7] text-center">
+                        <p className="text-xs text-[#888888]">No responsibilities added yet.</p>
+                        <button
+                          onClick={() => {
+                            setActiveExpBulletAddId(exp.id);
+                            setInlineBulletText('');
+                          }}
+                          className="text-xs text-[#0066CC] hover:underline mt-1 inline-flex items-center gap-1 font-medium"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add your first responsibility bullet
+                        </button>
+                      </div>
+                    ) : (
+                      <ul className="space-y-2">
+                        {exp.responsibilities.map((r) => (
+                          <li
+                            key={r.id}
+                            className="text-xs text-[#333333] flex items-start justify-between gap-2 bg-[#FBFBFC] p-2.5 rounded-lg border border-[#E5E5E7]/50 group hover:border-[#0066CC]/30 transition-colors"
+                          >
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-[#0066CC] font-mono text-[10px] bg-[#F0F7FF] px-1 py-0.5 rounded border border-[#0066CC]/20 shrink-0 mt-0.5">
+                                {r.id}
+                              </span>
+                              <span className="leading-relaxed">{r.text}</span>
+                            </div>
+                            <button
+                              onClick={() => removeExperienceBullet(exp.id, r.id)}
+                              className="text-[#999999] hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50 shrink-0 opacity-80 group-hover:opacity-100"
+                              title="Remove responsibility"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
 
                   {/* Achievements */}
@@ -1300,12 +1518,21 @@ export default function ProfilePage() {
                         {exp.achievements.map((a) => (
                           <li
                             key={a.id}
-                            className="text-xs text-[#333333] flex items-start gap-2 bg-emerald-50/40 p-2.5 rounded-lg border border-emerald-200/50"
+                            className="text-xs text-[#333333] flex items-start justify-between gap-2 bg-emerald-50/40 p-2.5 rounded-lg border border-emerald-200/50 group"
                           >
-                            <span className="text-emerald-700 font-mono text-[10px] bg-emerald-100/70 px-1 py-0.5 rounded shrink-0">
-                              {a.id}
-                            </span>
-                            <span className="leading-relaxed">{a.text}</span>
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-emerald-700 font-mono text-[10px] bg-emerald-100/70 px-1 py-0.5 rounded shrink-0 mt-0.5">
+                                {a.id}
+                              </span>
+                              <span className="leading-relaxed">{a.text}</span>
+                            </div>
+                            <button
+                              onClick={() => removeExperienceBullet(exp.id, a.id)}
+                              className="text-[#999999] hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50 shrink-0 opacity-80 group-hover:opacity-100"
+                              title="Remove achievement"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </li>
                         ))}
                       </ul>
@@ -1381,6 +1608,22 @@ export default function ProfilePage() {
                       className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
                     />
                   </div>
+
+                  <div className="sm:col-span-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[11px] font-medium text-[#555555]">
+                        Key Highlights & Bullets (one per line)
+                      </label>
+                      <span className="text-[10px] text-[#888888]">Press Enter for each bullet</span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      placeholder="- Built full-stack e-commerce web application with payment integration&#10;- Designed responsive UI with Tailwind CSS and Next.js&#10;- Implemented JWT authentication and role-based access control"
+                      value={projBulletInput}
+                      onChange={(e) => setProjBulletInput(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-white border border-[#E5E5E7] rounded-lg leading-relaxed focus:border-[#0066CC] outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -1425,19 +1668,101 @@ export default function ProfilePage() {
                     ))}
                   </div>
 
-                  <ul className="space-y-2 pt-1">
-                    {proj.bullets.map((b) => (
-                      <li
-                        key={b.id}
-                        className="text-xs text-[#333333] flex items-start gap-2 bg-[#FBFBFC] p-2 rounded border border-[#E5E5E7]/50"
-                      >
-                        <span className="text-[#0066CC] font-mono text-[10px] bg-[#F0F7FF] px-1 py-0.5 rounded border border-[#0066CC]/20 shrink-0">
-                          {b.id}
-                        </span>
-                        <span className="leading-relaxed">{b.text}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#555555]">
+                        Highlights & Bullets ({proj.bullets?.length || 0})
+                      </h4>
+                      {activeProjBulletAddId !== proj.id && (
+                        <button
+                          onClick={() => {
+                            setActiveProjBulletAddId(proj.id);
+                            setInlineProjBulletText('');
+                          }}
+                          className="text-[11px] text-[#0066CC] hover:underline flex items-center gap-1 font-medium"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add Bullet
+                        </button>
+                      )}
+                    </div>
+
+                    {activeProjBulletAddId === proj.id && (
+                      <div className="p-3 bg-[#F0F7FF] border border-[#0066CC]/30 rounded-lg space-y-2">
+                        <textarea
+                          rows={2}
+                          placeholder="Enter project bullet or key highlight..."
+                          value={inlineProjBulletText}
+                          onChange={(e) => setInlineProjBulletText(e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg outline-none focus:border-[#0066CC]"
+                          autoFocus
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setActiveProjBulletAddId(null);
+                              setInlineProjBulletText('');
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              if (inlineProjBulletText.trim()) {
+                                addProjectBullet(proj.id, inlineProjBulletText);
+                                setActiveProjBulletAddId(null);
+                                setInlineProjBulletText('');
+                              }
+                            }}
+                          >
+                            Add Bullet
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {(!proj.bullets || proj.bullets.length === 0) && activeProjBulletAddId !== proj.id ? (
+                      <div className="p-2.5 bg-[#FBFBFC] rounded-lg border border-dashed border-[#D2D2D7] text-center">
+                        <p className="text-xs text-[#888888]">No bullets added yet.</p>
+                        <button
+                          onClick={() => {
+                            setActiveProjBulletAddId(proj.id);
+                            setInlineProjBulletText('');
+                          }}
+                          className="text-xs text-[#0066CC] hover:underline mt-1 inline-flex items-center gap-1 font-medium"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add highlight bullet
+                        </button>
+                      </div>
+                    ) : (
+                      <ul className="space-y-2">
+                        {proj.bullets.map((b) => (
+                          <li
+                            key={b.id}
+                            className="text-xs text-[#333333] flex items-start justify-between gap-2 bg-[#FBFBFC] p-2.5 rounded-lg border border-[#E5E5E7]/50 group hover:border-[#0066CC]/30 transition-colors"
+                          >
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-[#0066CC] font-mono text-[10px] bg-[#F0F7FF] px-1 py-0.5 rounded border border-[#0066CC]/20 shrink-0 mt-0.5">
+                                {b.id}
+                              </span>
+                              <span className="leading-relaxed">{b.text}</span>
+                            </div>
+                            <button
+                              onClick={() => removeProjectBullet(proj.id, b.id)}
+                              className="text-[#999999] hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50 shrink-0 opacity-80 group-hover:opacity-100"
+                              title="Remove bullet"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
