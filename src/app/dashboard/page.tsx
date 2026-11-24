@@ -22,7 +22,10 @@ import {
   ShieldCheck,
   AlertCircle,
   LogIn,
+  Share2,
 } from 'lucide-react';
+import { haptics } from '@/lib/haptics';
+import { nativeShare } from '@/lib/share';
 import { TailoredResume, JobDescription, SavedApplication, ResumeTemplate } from '@/types';
 
 export default function DashboardPage() {
@@ -92,6 +95,7 @@ export default function DashboardPage() {
 
   const downloadDocx = async (resume: TailoredResume) => {
     try {
+      haptics.light();
       const template = templates.find((t) => t.id === resume.templateId) || templates[0];
       const res = await fetch('/api/export/docx', {
         method: 'POST',
@@ -107,7 +111,9 @@ export default function DashboardPage() {
       document.body.appendChild(a);
       a.click();
       a.remove();
+      haptics.success();
     } catch (err) {
+      haptics.error();
       console.error(err);
       alert('Could not download DOCX.');
     }
@@ -115,6 +121,7 @@ export default function DashboardPage() {
 
   const downloadPdf = async (resume: TailoredResume) => {
     try {
+      haptics.light();
       const template = templates.find((t) => t.id === resume.templateId) || templates[0];
       const res = await fetch('/api/export/pdf', {
         method: 'POST',
@@ -130,10 +137,21 @@ export default function DashboardPage() {
       document.body.appendChild(a);
       a.click();
       a.remove();
+      haptics.success();
     } catch (err) {
+      haptics.error();
       console.error(err);
       alert('Could not download PDF.');
     }
+  };
+
+  const shareResume = async (resume: TailoredResume) => {
+    haptics.light();
+    await nativeShare.share({
+      title: `${profile.personalInfo.fullName} - ${resume.title}`,
+      text: `ATS-optimized Tailored Resume for ${resume.title}. Verified factual ground truth.`,
+      url: typeof window !== 'undefined' ? `${window.location.origin}/tailor?resumeId=${resume.id}` : undefined,
+    });
   };
 
   const displayName = user
@@ -386,6 +404,15 @@ export default function DashboardPage() {
                         icon={<Download className="w-3.5 h-3.5" />}
                       >
                         DOCX
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => shareResume(resume)}
+                        icon={<Share2 className="w-3.5 h-3.5" />}
+                        title="Share resume natively"
+                      >
+                        Share
                       </Button>
                     </div>
                   </div>

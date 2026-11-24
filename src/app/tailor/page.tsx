@@ -20,6 +20,8 @@ import {
 } from '@/types';
 import { AtsScanResult } from '@/lib/ai/atsScanner';
 import { CoverLetterData } from '@/lib/ai/coverLetterEngine';
+import { haptics } from '@/lib/haptics';
+import { nativeShare } from '@/lib/share';
 import {
   Sparkles,
   Upload,
@@ -48,6 +50,7 @@ import {
   Plus,
   Search,
   Zap,
+  Share2,
   TrendingUp,
   Target,
   Link2,
@@ -571,6 +574,7 @@ Nice to have:
   // Download DOCX
   const handleDownloadDocx = async () => {
     if (!tailoredResume) return;
+    haptics.light();
     try {
       const template = templates.find((t) => t.id === tailoredResume.templateId) || templates[0];
       const res = await fetch('/api/export/docx', {
@@ -587,7 +591,9 @@ Nice to have:
       document.body.appendChild(a);
       a.click();
       a.remove();
+      haptics.success();
     } catch (err) {
+      haptics.error();
       console.error(err);
       alert('Could not download DOCX.');
     }
@@ -599,6 +605,7 @@ Nice to have:
   const handleDownloadPdf = async () => {
     if (!tailoredResume) return;
     setIsExportingPdf(true);
+    haptics.light();
 
     try {
       const template = templates.find((t) => t.id === selectedTemplateId) || templates[0];
@@ -629,12 +636,25 @@ Nice to have:
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+      haptics.success();
     } catch (err: any) {
+      haptics.error();
       console.error('PDF export error:', err);
       alert('PDF generation error: ' + (err.message || 'Unknown error'));
     } finally {
       setIsExportingPdf(false);
     }
+  };
+
+  // Native Mobile Web Share
+  const handleShareResume = async () => {
+    if (!tailoredResume) return;
+    haptics.light();
+    await nativeShare.share({
+      title: `${profile.personalInfo.fullName} - ${tailoredResume.title}`,
+      text: `ATS-optimized Tailored Resume for ${tailoredResume.title} (${tailoredResume.analysis?.relevanceScore ?? 92}% match). Factual truth verified.`,
+      url: typeof window !== 'undefined' ? `${window.location.origin}/tailor?resumeId=${tailoredResume.id}` : undefined,
+    });
   };
 
   // Save to Job Applications
@@ -1525,6 +1545,15 @@ Nice to have:
                       icon={<Download className="w-3.5 h-3.5" />}
                     >
                       Download DOCX
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleShareResume}
+                      icon={<Share2 className="w-3.5 h-3.5 text-[#0066CC]" />}
+                      title="Share tailored resume"
+                    >
+                      Share
                     </Button>
                   </>
                 )}

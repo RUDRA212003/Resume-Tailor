@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { repository } from '@/lib/storage/repository';
 import { DEFAULT_PROFILE } from '@/lib/storage/defaultData';
+import { haptics } from '@/lib/haptics';
 import {
   Profile,
   SkillCategory,
@@ -110,23 +111,27 @@ export default function ProfilePage() {
   const [projBulletInput, setProjBulletInput] = useState('');
 
   const handleSave = async () => {
+    haptics.light();
     setIsSaving(true);
     repository.saveProfile(profile);
 
     try {
       const res = await repository.syncProfileToDb(profile);
       if (res.success) {
+        haptics.success();
         setSaveStatus({
           type: 'success',
           message: 'Saved & synchronized with MongoDB Atlas!',
         });
       } else {
+        haptics.warning();
         setSaveStatus({
           type: 'warning',
           message: res.error || 'Saved to local cache. Database write was not confirmed.',
         });
       }
     } catch (err: any) {
+      haptics.warning();
       setSaveStatus({
         type: 'warning',
         message: 'Saved to local cache. Database offline: ' + (err.message || 'Unknown error'),

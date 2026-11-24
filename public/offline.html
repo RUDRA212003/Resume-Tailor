@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Offline – Resume Tailor</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0066CC">
+  <style>
+    :root {
+      --bg: #F5F5F7;
+      --card-bg: #FFFFFF;
+      --text: #1D1D1F;
+      --subtext: #666666;
+      --primary: #0066CC;
+      --border: #E5E5E7;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 20px;
+      padding-top: max(env(safe-area-inset-top, 20px), 20px);
+      padding-bottom: max(env(safe-area-inset-bottom, 20px), 20px);
+      text-align: center;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px 28px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+    .icon-wrapper {
+      width: 64px;
+      height: 64px;
+      background: #F0F7FF;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px auto;
+      color: var(--primary);
+    }
+    .icon-wrapper svg {
+      width: 32px;
+      height: 32px;
+    }
+    h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    p {
+      font-size: 14px;
+      color: var(--subtext);
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #FFF3E0;
+      color: #E65100;
+      padding: 4px 12px;
+      border-radius: 980px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .btn {
+      display: inline-block;
+      width: 100%;
+      background: var(--primary);
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 980px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0, 102, 204, 0.25);
+    }
+    .btn:hover {
+      background: #0052A3;
+    }
+    .footer-note {
+      margin-top: 18px;
+      font-size: 12px;
+      color: #888888;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-wrapper">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 7.5h.008v.008H12v-.008z" />
+      </svg>
+    </div>
+
+    <span class="status-badge">No Internet Connection</span>
+
+    <h1>You Are Currently Offline</h1>
+    <p>Resume Tailor requires an active connection to analyze job postings, generate fact-checked resumes with AI, and securely sync with your cloud database.</p>
+
+    <button class="btn" onclick="retryConnection()">Retry Connection</button>
+
+    <div class="footer-note">
+      Please check your Wi-Fi or cellular network.
+    </div>
+  </div>
+
+  <script>
+    function retryConnection() {
+      if (navigator.onLine) {
+        window.location.reload();
+      } else {
+        alert('Still offline. Please check your mobile data or Wi-Fi settings.');
+      }
+    }
+
+    window.addEventListener('online', () => {
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>

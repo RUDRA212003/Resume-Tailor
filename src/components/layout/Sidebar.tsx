@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useAuthModal } from '@/context/AuthModalContext';
+import { usePwa } from '@/context/PwaContext';
 import {
   LayoutDashboard,
   UserCheck,
@@ -17,6 +18,7 @@ import {
   LogIn,
   LogOut,
   User as UserIcon,
+  Download,
 } from 'lucide-react';
 import { repository } from '@/lib/storage/repository';
 
@@ -68,6 +70,7 @@ export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { user, isLoading } = useUser();
   const { requireAuth } = useAuthModal();
+  const { isInstallable, isInstalled, promptInstall } = usePwa();
 
   const handleNavClick = (e: React.MouseEvent, href: string, name: string) => {
     if (!user) {
@@ -131,6 +134,19 @@ export const Sidebar: React.FC = () => {
           );
         })}
       </nav>
+
+      {/* Install Desktop App Button */}
+      {isInstallable && !isInstalled && (
+        <div className="px-3 mb-2">
+          <button
+            onClick={() => promptInstall()}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#F0F7FF] text-[#0066CC] border border-[#0066CC]/20 text-xs font-semibold hover:bg-[#E0EFFF] transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Install Desktop App</span>
+          </button>
+        </div>
+      )}
 
       {/* Ground Truth Guarantee Footer Badge */}
       <div className="p-3 mx-3 mb-2 bg-[#F5F5F7] rounded-xl border border-[#E5E5E7]/70 text-xs text-[#1D1D1F]">

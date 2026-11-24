@@ -42,9 +42,36 @@
   background: #aeaeb2;
 }
 
-/* Safe area padding for mobile devices (iPhone home indicator) */
+/* Safe area padding for mobile devices (iPhone home indicator and notches) */
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top, 0px), 0px);
+}
 .pb-safe {
   padding-bottom: max(env(safe-area-inset-bottom, 12px), 12px);
+}
+.pl-safe {
+  padding-left: max(env(safe-area-inset-left, 0px), 0px);
+}
+.pr-safe {
+  padding-right: max(env(safe-area-inset-right, 0px), 0px);
+}
+
+/* Mobile PWA touch optimizations */
+html {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Standalone PWA display tweaks */
+@media all and (display-mode: standalone) {
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  input, textarea, [contenteditable="true"] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
 }
 
 /* Hide scrollbar for smooth touch-swipe tab strips */

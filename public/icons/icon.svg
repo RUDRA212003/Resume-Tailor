@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0066CC" />
+      <stop offset="100%" stop-color="#004C99" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#002244" flood-opacity="0.35" />
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+  <g filter="url(#shadow)">
+    <rect x="138" y="102" width="236" height="308" rx="24" fill="#FFFFFF" />
+    <!-- Stylized Resume Lines -->
+    <rect x="180" y="210" width="152" height="16" rx="8" fill="#C8DCF0" />
+    <rect x="180" y="254" width="120" height="16" rx="8" fill="#C8DCF0" />
+    <rect x="180" y="298" width="138" height="16" rx="8" fill="#C8DCF0" />
+    <!-- AI Star Emblem -->
+    <path d="M 314 162 Q 314 178 330 178 Q 314 178 314 194 Q 314 178 298 178 Q 314 178 314 162 Z" fill="#0066CC" />
+  </g>
+</svg>

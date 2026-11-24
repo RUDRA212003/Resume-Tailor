@@ -22,8 +22,11 @@ import {
   LogIn,
   LogOut,
   User as UserIcon,
+  Download,
 } from 'lucide-react';
 import { repository } from '@/lib/storage/repository';
+import { haptics } from '@/lib/haptics';
+import { usePwa } from '@/context/PwaContext';
 
 interface BottomNavProps {
   profileName?: string;
@@ -40,8 +43,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const { user } = useUser();
   const { requireAuth } = useAuthModal();
+  const { isInstallable, isInstalled, promptInstall } = usePwa();
 
   const handleTabClick = (e: React.MouseEvent, href: string, name: string) => {
+    haptics.selection();
     if (href !== '/dashboard' && !user) {
       e.preventDefault();
       requireAuth(href, name);
@@ -49,6 +54,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   };
 
   const handleMoreItemClick = (e: React.MouseEvent, href: string, name: string) => {
+    haptics.selection();
     setIsMoreOpen(false);
     if (!user) {
       e.preventDefault();
@@ -246,6 +252,29 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   </Link>
                 );
               })}
+
+              {/* Install Mobile App Prompt in More Drawer */}
+              {isInstallable && !isInstalled && (
+                <button
+                  onClick={() => {
+                    haptics.light();
+                    setIsMoreOpen(false);
+                    promptInstall();
+                  }}
+                  className="w-full flex items-center justify-between p-3.5 rounded-xl border border-[#0066CC]/25 bg-[#F0F7FF] text-[#0066CC] hover:bg-blue-100/60 transition-all text-left mt-2 shadow-xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#0066CC] text-white flex items-center justify-center shadow-xs">
+                      <Download className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[#1D1D1F]">Install Resume Tailor</div>
+                      <div className="text-[11px] text-[#555555]">Add to home screen for native app experience</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[#0066CC]" />
+                </button>
+              )}
             </div>
 
             {/* Factual Truth Guarantee Badge */}
@@ -346,7 +375,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
           {/* More Menu Trigger */}
           <button
-            onClick={() => setIsMoreOpen(true)}
+            onClick={() => {
+              haptics.impactMedium();
+              setIsMoreOpen(true);
+            }}
             className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-all ${
               isMoreActive || isMoreOpen
                 ? 'text-[#0066CC] font-semibold'
