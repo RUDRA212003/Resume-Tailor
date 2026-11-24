@@ -11,12 +11,14 @@ export const isAuth0Configured = (): boolean => {
 };
 
 export const getAppBaseUrl = (): string => {
-  let url = 'http://localhost:3000';
-  if (process.env.APP_BASE_URL) url = process.env.APP_BASE_URL;
-  else if (process.env.AUTH0_BASE_URL) url = process.env.AUTH0_BASE_URL;
-  else if (process.env.VERCEL_PROJECT_PRODUCTION_URL) url = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  else if (process.env.VERCEL_URL) url = `https://${process.env.VERCEL_URL}`;
-  return url.replace(/\/+$/, '');
+  if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL.replace(/\/+$/, '');
+  if (process.env.AUTH0_BASE_URL) return process.env.AUTH0_BASE_URL.replace(/\/+$/, '');
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://resume-tailor-tool21.vercel.app';
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`.replace(/\/+$/, '');
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`.replace(/\/+$/, '');
+  return 'http://localhost:3000';
 };
 
 // Singleton Auth0 client for server-side operations, session retrieval, and middleware
