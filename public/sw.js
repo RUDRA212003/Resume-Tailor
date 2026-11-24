@@ -1,7 +1,7 @@
-// Resume Tailor Service Worker - v1.0.0
+// Resume Tailor Service Worker - v2.0.0
 // Strict PWA security: Never cache sensitive user documents, Auth0 tokens, or API responses.
 
-const CACHE_NAME = 'resume-tailor-v1';
+const CACHE_NAME = 'resume-tailor-v2';
 
 const PRECACHE_ASSETS = [
   '/offline.html',

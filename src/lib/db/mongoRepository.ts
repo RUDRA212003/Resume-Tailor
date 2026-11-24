@@ -166,20 +166,7 @@ export const mongoRepository = {
   async getProfile(userId: string, userName?: string, userEmail?: string): Promise<Profile> {
     if (!isMongoConfigured()) {
       const existing = memoryStore.profiles.get(userId);
-      if (existing) {
-        if (
-          existing.personalInfo &&
-          (existing.personalInfo.fullName === 'RUDRESH M' ||
-            existing.personalInfo.email === 'rudreshmanjunath15@gmail.com' ||
-            existing.personalInfo.phone === '+91 6364152219') &&
-          userId !== 'usr_001_demo'
-        ) {
-          const cleaned = createDefaultUserProfile(userId, userName, userEmail);
-          memoryStore.profiles.set(userId, cleaned);
-          return cleaned;
-        }
-        return existing;
-      }
+      if (existing) return existing;
       const initial = createDefaultUserProfile(userId, userName, userEmail);
       memoryStore.profiles.set(userId, initial);
       return initial;
@@ -195,19 +182,6 @@ export const mongoRepository = {
         const initial = createDefaultUserProfile(userId, userName, userEmail);
         await coll.insertOne(initial);
         return initial;
-      }
-
-      // Sanitize legacy demo data if account was seeded with demo data
-      if (
-        doc.personalInfo &&
-        (doc.personalInfo.fullName === 'RUDRESH M' ||
-          doc.personalInfo.email === 'rudreshmanjunath15@gmail.com' ||
-          doc.personalInfo.phone === '+91 6364152219') &&
-        userId !== 'usr_001_demo'
-      ) {
-        const cleaned = createDefaultUserProfile(userId, userName, userEmail);
-        await coll.updateOne({ userId }, { $set: cleaned }, { upsert: true });
-        return cleaned;
       }
 
       return doc;

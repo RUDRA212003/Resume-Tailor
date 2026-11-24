@@ -10,6 +10,7 @@ import { DEFAULT_PROFILE, createEmptyProfile } from '@/lib/storage/defaultData';
 import { haptics } from '@/lib/haptics';
 import {
   Profile,
+  SummaryVersion,
   SkillCategory,
   SKILL_CATEGORIES,
   SkillItem,
@@ -62,22 +63,9 @@ export default function ProfilePage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && data.personalInfo) {
-          // If legacy demo profile ("RUDRESH M"), sanitize to clean empty profile
-          if (
-            (data.personalInfo.fullName === 'RUDRESH M' ||
-              data.personalInfo.email === 'rudreshmanjunath15@gmail.com' ||
-              data.personalInfo.phone === '+91 6364152219') &&
-            data.userId !== 'usr_001_demo'
-          ) {
-            const clean = createEmptyProfile(data.userId || '');
-            setProfile(clean);
-            repository.cacheProfile(clean);
-            setSavedSnapshot(JSON.stringify(clean));
-          } else {
-            setProfile(data);
-            repository.cacheProfile(data);
-            setSavedSnapshot(JSON.stringify(data));
-          }
+          setProfile(data);
+          repository.cacheProfile(data);
+          setSavedSnapshot(JSON.stringify(data));
         }
       })
       .catch((err) => console.log('Loaded from local cache:', err));
@@ -119,6 +107,11 @@ export default function ProfilePage() {
     return () => document.removeEventListener('click', handleLinkClick, true);
   }, [isDirty]);
 
+  // Summary Add Modal State
+  const [isAddingSummary, setIsAddingSummary] = useState(false);
+  const [newSummaryTitle, setNewSummaryTitle] = useState('Professional Summary');
+  const [newSummaryContent, setNewSummaryContent] = useState('');
+
   // Skill Add Modal State
   const [isAddingSkill, setIsAddingSkill] = useState(false);
   const [newSkill, setNewSkill] = useState<Partial<SkillItem>>({
@@ -129,6 +122,11 @@ export default function ProfilePage() {
     isVerified: true,
   });
   const [aliasInput, setAliasInput] = useState('');
+
+  // AI Skill Organizer State
+  const [isAiSkillBoxOpen, setIsAiSkillBoxOpen] = useState(false);
+  const [rawSkillInput, setRawSkillInput] = useState('');
+  const [isOrganizingSkills, setIsOrganizingSkills] = useState(false);
 
   // Experience Add Modal State
   const [isAddingExp, setIsAddingExp] = useState(false);
@@ -162,6 +160,30 @@ export default function ProfilePage() {
   });
   const [projTechInput, setProjTechInput] = useState('');
   const [projBulletInput, setProjBulletInput] = useState('');
+
+  // Education Add Modal State
+  const [isAddingEdu, setIsAddingEdu] = useState(false);
+  const [newEdu, setNewEdu] = useState<Partial<EducationItem>>({
+    institution: '',
+    degree: '',
+    branch: '',
+    startYear: '',
+    graduationYear: '',
+    cgpaOrPercentage: '',
+    additionalInfo: '',
+  });
+
+  // Certifications Add Modal State
+  const [isAddingCert, setIsAddingCert] = useState(false);
+  const [newCert, setNewCert] = useState<Partial<CertificationItem>>({
+    name: '',
+    issuingOrg: '',
+    issueDate: '',
+    expirationDate: '',
+    credentialId: '',
+    credentialUrl: '',
+    description: '',
+  });
 
   const handleSave = async () => {
     if (!profile.personalInfo.fullName.trim()) {
@@ -323,6 +345,139 @@ export default function ProfilePage() {
     const updated = {
       ...profile,
       projects: profile.projects.filter((p) => p.id !== id),
+    };
+    setProfile(updated);
+    repository.saveProfile(updated);
+  };
+
+  // Summary Handlers
+  const addSummary = () => {
+    if (!newSummaryContent.trim()) return;
+    const item: SummaryVersion = {
+      id: `sum-${Date.now()}`,
+      title: newSummaryTitle.trim() || 'Professional Summary',
+      content: newSummaryContent.trim(),
+      isDefault: profile.summaries.length === 0,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = {
+      ...profile,
+      summaries: [...profile.summaries, item],
+    };
+    setProfile(updated);
+    repository.saveProfile(updated);
+    setIsAddingSummary(false);
+    setNewSummaryTitle('Professional Summary');
+    setNewSummaryContent('');
+  };
+
+  const removeSummary = (id: string) => {
+    const updated = {
+      ...profile,
+      summaries: profile.summaries.filter((s) => s.id !== id),
+    };
+    if (updated.summaries.length > 0 && !updated.summaries.some((s) => s.isDefault)) {
+      updated.summaries[0].isDefault = true;
+    }
+    setProfile(updated);
+    repository.saveProfile(updated);
+  };
+
+  // AI Skill Organizer Handler
+  const handleOrganizeSkillsWithAi = async () => {
+    if (!rawSkillInput.trim()) return;
+    setIsOrganizingSkills(true);
+    try {
+      const res = await fetch('/api/ai/organize-skills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: rawSkillInput }),
+      });
+      const data = await res.json();
+      if (data.skills && data.skills.length > 0) {
+        haptics.success();
+        const existingNames = new Set(profile.skills.map((s) => s.name.toLowerCase()));
+        const newSkills = data.skills.filter((s: SkillItem) => !existingNames.has(s.name.toLowerCase()));
+        const updated = {
+          ...profile,
+          skills: [...profile.skills, ...newSkills],
+        };
+        setProfile(updated);
+        repository.saveProfile(updated);
+        setRawSkillInput('');
+        setIsAiSkillBoxOpen(false);
+        setSaveStatus({
+          type: 'success',
+          message: `✨ Organized and added ${newSkills.length} new skill(s) under categorized headings!`,
+        });
+        setTimeout(() => setSaveStatus({ type: 'idle', message: '' }), 4000);
+      }
+    } catch (err: any) {
+      alert('Failed to organize skills: ' + err.message);
+    } finally {
+      setIsOrganizingSkills(false);
+    }
+  };
+
+  // Education Handlers
+  const addEducation = () => {
+    if (!newEdu.institution?.trim() || !newEdu.degree?.trim()) return;
+    const item: EducationItem = {
+      id: `edu-${Date.now()}`,
+      institution: newEdu.institution.trim(),
+      degree: newEdu.degree.trim(),
+      branch: newEdu.branch?.trim() || '',
+      startYear: newEdu.startYear?.trim() || '',
+      graduationYear: newEdu.graduationYear?.trim() || '',
+      cgpaOrPercentage: newEdu.cgpaOrPercentage?.trim() || '',
+      additionalInfo: newEdu.additionalInfo?.trim() || '',
+    };
+    const updated = {
+      ...profile,
+      education: [...profile.education, item],
+    };
+    setProfile(updated);
+    repository.saveProfile(updated);
+    setIsAddingEdu(false);
+    setNewEdu({ institution: '', degree: '', branch: '', startYear: '', graduationYear: '', cgpaOrPercentage: '', additionalInfo: '' });
+  };
+
+  const removeEducation = (id: string) => {
+    const updated = {
+      ...profile,
+      education: profile.education.filter((e) => e.id !== id),
+    };
+    setProfile(updated);
+    repository.saveProfile(updated);
+  };
+
+  // Certifications Handlers
+  const addCertification = () => {
+    if (!newCert.name?.trim()) return;
+    const item: CertificationItem = {
+      id: `cert-${Date.now()}`,
+      name: newCert.name.trim(),
+      issuingOrg: newCert.issuingOrg?.trim() || '',
+      issueDate: newCert.issueDate?.trim() || '',
+      expirationDate: newCert.expirationDate?.trim() || '',
+      credentialId: newCert.credentialId?.trim() || '',
+      credentialUrl: newCert.credentialUrl?.trim() || '',
+      description: newCert.description?.trim() || '',
+    };
+    const updated = {
+      ...profile,
+      certifications: [...profile.certifications, item],
+    };
+    setProfile(updated);
+    repository.saveProfile(updated);
+    setIsAddingCert(false);
+    setNewCert({ name: '', issuingOrg: '', issueDate: '', expirationDate: '', credentialId: '', credentialUrl: '', description: '' });
+  };
+
+  const removeCertification = (id: string) => {
+    const updated = {
+      ...profile,
+      certifications: profile.certifications.filter((c) => c.id !== id),
     };
     setProfile(updated);
     repository.saveProfile(updated);
@@ -674,7 +829,7 @@ export default function ProfilePage() {
         {/* Tab 2: Summaries */}
         {activeTab === 'summary' && (
           <Card className="space-y-6">
-            <div className="flex items-center justify-between border-b border-[#E5E5E7] pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E5E7] pb-4">
               <div>
                 <h2 className="text-base font-semibold text-[#1D1D1F]">
                   Approved Professional Summaries
@@ -683,7 +838,59 @@ export default function ProfilePage() {
                   Maintain multiple approved summaries. The AI uses these as the foundation for tailoring.
                 </p>
               </div>
+              <Button
+                size="sm"
+                pill
+                onClick={() => setIsAddingSummary(true)}
+                icon={<Plus className="w-3.5 h-3.5" />}
+              >
+                Add Summary
+              </Button>
             </div>
+
+            {isAddingSummary && (
+              <div className="p-4 bg-[#F5F5F7] rounded-xl border border-[#0066CC]/30 space-y-3">
+                <h3 className="text-xs font-semibold text-[#1D1D1F]">Add Professional Summary</h3>
+                <div>
+                  <label className="block text-[11px] font-medium text-[#555555] mb-1">Summary Title / Focus</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Software Engineer (Full-Stack & Systems)"
+                    value={newSummaryTitle}
+                    onChange={(e) => setNewSummaryTitle(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-[#555555] mb-1">Summary Content</label>
+                  <textarea
+                    rows={4}
+                    placeholder="Describe your technical background, core competencies, and career achievements..."
+                    value={newSummaryContent}
+                    onChange={(e) => setNewSummaryContent(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="ghost" size="sm" onClick={() => setIsAddingSummary(false)}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={addSummary}>
+                    Save Summary
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {profile.summaries.length === 0 && !isAddingSummary && (
+              <div className="text-center py-8 px-4 bg-[#FBFBFC] border border-dashed border-[#E5E5E7] rounded-xl space-y-2">
+                <FileText className="w-8 h-8 text-[#999999] mx-auto" />
+                <p className="text-xs font-medium text-[#1D1D1F]">No approved summaries yet</p>
+                <p className="text-[11px] text-[#666666] max-w-sm mx-auto">
+                  Click &apos;Add Summary&apos; above or upload a resume to automatically extract your professional summary.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-4">
               {profile.summaries.map((s) => (
@@ -700,24 +907,33 @@ export default function ProfilePage() {
                       <span className="font-semibold text-xs text-[#1D1D1F]">{s.title}</span>
                       {s.isDefault && <Badge variant="info" size="sm">Default</Badge>}
                     </div>
-                    {!s.isDefault && (
+                    <div className="flex items-center gap-3">
+                      {!s.isDefault && (
+                        <button
+                          onClick={() => {
+                            const updated = {
+                              ...profile,
+                              summaries: profile.summaries.map((item) => ({
+                                ...item,
+                                isDefault: item.id === s.id,
+                              })),
+                            };
+                            setProfile(updated);
+                            repository.saveProfile(updated);
+                          }}
+                          className="text-xs text-[#0066CC] hover:underline font-medium"
+                        >
+                          Set as Default
+                        </button>
+                      )}
                       <button
-                        onClick={() => {
-                          const updated = {
-                            ...profile,
-                            summaries: profile.summaries.map((item) => ({
-                              ...item,
-                              isDefault: item.id === s.id,
-                            })),
-                          };
-                          setProfile(updated);
-                          repository.saveProfile(updated);
-                        }}
-                        className="text-xs text-[#0066CC] hover:underline font-medium"
+                        onClick={() => removeSummary(s.id)}
+                        className="text-xs text-red-600 hover:underline flex items-center gap-1"
                       >
-                        Set as Default
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
                       </button>
-                    )}
+                    </div>
                   </div>
                   <textarea
                     rows={3}
@@ -746,21 +962,66 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E5E7] pb-4">
               <div>
                 <h2 className="text-base font-semibold text-[#1D1D1F]">
-                  Categorized Technical Skills & Aliases
+                  Categorized Technical Skills &amp; Aliases
                 </h2>
                 <p className="text-xs text-[#555555] mt-0.5">
                   Controlled skill alias matching allows equivalent names (e.g. JS = JavaScript). Skills marked with a green checkmark are verified.
                 </p>
               </div>
-              <Button
-                size="sm"
-                pill
-                onClick={() => setIsAddingSkill(true)}
-                icon={<Plus className="w-3.5 h-3.5" />}
-              >
-                Add Skill
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  pill
+                  onClick={() => setIsAiSkillBoxOpen(!isAiSkillBoxOpen)}
+                  icon={<Sparkles className="w-3.5 h-3.5 text-indigo-600" />}
+                >
+                  {isAiSkillBoxOpen ? 'Close AI Organizer' : 'AI Skill Organizer'}
+                </Button>
+                <Button
+                  size="sm"
+                  pill
+                  onClick={() => setIsAddingSkill(true)}
+                  icon={<Plus className="w-3.5 h-3.5" />}
+                >
+                  Add Skill
+                </Button>
+              </div>
             </div>
+
+            {/* AI Skill Organizer Box */}
+            {isAiSkillBoxOpen && (
+              <div className="p-5 bg-gradient-to-br from-indigo-50/70 via-blue-50/50 to-white rounded-xl border border-indigo-200/80 shadow-sm space-y-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  <h3 className="text-xs font-bold text-[#1D1D1F]">AI Skill Organizer (Auto-Categorization)</h3>
+                </div>
+                <p className="text-xs text-[#555555]">
+                  Paste your raw skills text here with or without headings (e.g. <i>&quot;Programming Languages: Java, Python | Databases: PostgreSQL, MongoDB | Tools: Git, Docker&quot;</i>). The AI will automatically parse and file each skill under the correct category heading.
+                </p>
+                <textarea
+                  rows={4}
+                  placeholder={`Programming Languages: Java, JavaScript, TypeScript, Python\nFrontend Technologies: React.js, Next.js, Tailwind CSS\nBackend Technologies: Spring Boot, Express.js\nDatabases: PostgreSQL, MySQL, MongoDB\nDeveloper Tools: Git, Docker, Postman`}
+                  value={rawSkillInput}
+                  onChange={(e) => setRawSkillInput(e.target.value)}
+                  className="w-full text-xs font-mono bg-white border border-indigo-200 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button variant="ghost" size="sm" onClick={() => setIsAiSkillBoxOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleOrganizeSkillsWithAi}
+                    isLoading={isOrganizingSkills}
+                    icon={<Sparkles className="w-3.5 h-3.5" />}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  >
+                    Sort &amp; Add Skills with AI
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Add Skill Form Modal/Section */}
             {isAddingSkill && (
@@ -1186,23 +1447,136 @@ export default function ProfilePage() {
         {/* Tab 6: Education */}
         {activeTab === 'education' && (
           <Card className="space-y-6">
-            <div className="border-b border-[#E5E5E7] pb-4">
-              <h2 className="text-base font-semibold text-[#1D1D1F]">Education Details</h2>
-              <p className="text-xs text-[#555555] mt-0.5">
-                Degrees, universities, branches, and graduation years.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E5E7] pb-4">
+              <div>
+                <h2 className="text-base font-semibold text-[#1D1D1F]">Education Details</h2>
+                <p className="text-xs text-[#555555] mt-0.5">
+                  Degrees, universities, branches, and graduation years.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                pill
+                onClick={() => setIsAddingEdu(true)}
+                icon={<Plus className="w-3.5 h-3.5" />}
+              >
+                Add Education
+              </Button>
             </div>
+
+            {isAddingEdu && (
+              <div className="p-4 bg-[#F5F5F7] rounded-xl border border-[#0066CC]/30 space-y-3">
+                <h3 className="text-xs font-semibold text-[#1D1D1F]">Add Education Record</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#555555] mb-1">Degree</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Bachelor of Engineering"
+                      value={newEdu.degree}
+                      onChange={(e) => setNewEdu({ ...newEdu, degree: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#555555] mb-1">Branch / Major</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Computer Science and Engineering"
+                      value={newEdu.branch}
+                      onChange={(e) => setNewEdu({ ...newEdu, branch: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-medium text-[#555555] mb-1">Institution / University</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Kalpataru Institute Of Technology, Tiptur"
+                      value={newEdu.institution}
+                      onChange={(e) => setNewEdu({ ...newEdu, institution: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#555555] mb-1">Start Year</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 2022"
+                      value={newEdu.startYear}
+                      onChange={(e) => setNewEdu({ ...newEdu, startYear: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#555555] mb-1">Graduation Year</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 2026"
+                      value={newEdu.graduationYear}
+                      onChange={(e) => setNewEdu({ ...newEdu, graduationYear: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#555555] mb-1">CGPA / Score</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 8.4 / 10"
+                      value={newEdu.cgpaOrPercentage}
+                      onChange={(e) => setNewEdu({ ...newEdu, cgpaOrPercentage: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#555555] mb-1">Additional Info</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Location: Karnataka, India"
+                      value={newEdu.additionalInfo}
+                      onChange={(e) => setNewEdu({ ...newEdu, additionalInfo: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="ghost" size="sm" onClick={() => setIsAddingEdu(false)}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={addEducation}>
+                    Save Education
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {profile.education.length === 0 && !isAddingEdu && (
+              <div className="text-center py-8 px-4 bg-[#FBFBFC] border border-dashed border-[#E5E5E7] rounded-xl space-y-2">
+                <GraduationCap className="w-8 h-8 text-[#999999] mx-auto" />
+                <p className="text-xs font-medium text-[#1D1D1F]">No education records added yet</p>
+                <p className="text-[11px] text-[#666666]">Click &apos;Add Education&apos; or upload your resume to populate.</p>
+              </div>
+            )}
 
             <div className="space-y-4">
               {profile.education.map((edu) => (
-                <div key={edu.id} className="p-4 bg-white border border-[#E5E5E7] rounded-xl space-y-2">
+                <div key={edu.id} className="p-4 bg-white border border-[#E5E5E7] rounded-xl space-y-2 hover:border-[#0071E3] transition-colors">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-sm text-[#1D1D1F]">
-                      {edu.degree} in {edu.branch}
+                      {edu.degree} {edu.branch ? `in ${edu.branch}` : ''}
                     </h3>
-                    <span className="text-xs text-[#555555]">
-                      {edu.startYear} – {edu.graduationYear}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-[#555555]">
+                        {edu.startYear} – {edu.graduationYear}
+                      </span>
+                      <button
+                        onClick={() => removeEducation(edu.id)}
+                        className="text-xs text-red-600 hover:underline flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
+                      </button>
+                    </div>
                   </div>
                   <p className="text-xs text-[#0066CC] font-medium">{edu.institution}</p>
                   {edu.cgpaOrPercentage && (
@@ -1220,19 +1594,102 @@ export default function ProfilePage() {
         {/* Tab 7: Certifications */}
         {activeTab === 'certifications' && (
           <Card className="space-y-6">
-            <div className="border-b border-[#E5E5E7] pb-4">
-              <h2 className="text-base font-semibold text-[#1D1D1F]">Certifications & Accreditations</h2>
-              <p className="text-xs text-[#555555] mt-0.5">
-                Verified industry certifications. The AI will never invent unearned certifications.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E5E7] pb-4">
+              <div>
+                <h2 className="text-base font-semibold text-[#1D1D1F]">Certifications &amp; Accreditations</h2>
+                <p className="text-xs text-[#555555] mt-0.5">
+                  Verified industry certifications. The AI will never invent unearned certifications.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                pill
+                onClick={() => setIsAddingCert(true)}
+                icon={<Plus className="w-3.5 h-3.5" />}
+              >
+                Add Certification
+              </Button>
             </div>
+
+            {isAddingCert && (
+              <div className="p-4 bg-[#F5F5F7] rounded-xl border border-[#0066CC]/30 space-y-3">
+                <h3 className="text-xs font-semibold text-[#1D1D1F]">Add Certification</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#555555] mb-1">Certification Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. AWS Certified Solutions Architect"
+                      value={newCert.name}
+                      onChange={(e) => setNewCert({ ...newCert, name: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#555555] mb-1">Issuing Organization</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Amazon Web Services"
+                      value={newCert.issuingOrg}
+                      onChange={(e) => setNewCert({ ...newCert, issuingOrg: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#555555] mb-1">Issue Date</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 2024-05"
+                      value={newCert.issueDate}
+                      onChange={(e) => setNewCert({ ...newCert, issueDate: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#555555] mb-1">Credential ID (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. AWS-12345"
+                      value={newCert.credentialId}
+                      onChange={(e) => setNewCert({ ...newCert, credentialId: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-[#E5E5E7] rounded-lg"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="ghost" size="sm" onClick={() => setIsAddingCert(false)}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={addCertification}>
+                    Save Certification
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {profile.certifications.length === 0 && !isAddingCert && (
+              <div className="text-center py-8 px-4 bg-[#FBFBFC] border border-dashed border-[#E5E5E7] rounded-xl space-y-2">
+                <Award className="w-8 h-8 text-[#999999] mx-auto" />
+                <p className="text-xs font-medium text-[#1D1D1F]">No certifications added yet</p>
+                <p className="text-[11px] text-[#666666]">Click &apos;Add Certification&apos; to register your earned credentials.</p>
+              </div>
+            )}
 
             <div className="space-y-4">
               {profile.certifications.map((cert) => (
-                <div key={cert.id} className="p-4 bg-white border border-[#E5E5E7] rounded-xl space-y-2">
+                <div key={cert.id} className="p-4 bg-white border border-[#E5E5E7] rounded-xl space-y-2 hover:border-[#0071E3] transition-colors">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-sm text-[#1D1D1F]">{cert.name}</h3>
-                    <span className="text-xs text-[#555555]">{cert.issueDate}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-[#555555]">{cert.issueDate}</span>
+                      <button
+                        onClick={() => removeCertification(cert.id)}
+                        className="text-xs text-red-600 hover:underline flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
+                      </button>
+                    </div>
                   </div>
                   <p className="text-xs text-[#0066CC] font-medium">{cert.issuingOrg}</p>
                   {cert.credentialId && (
