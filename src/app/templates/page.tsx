@@ -92,23 +92,23 @@ export default function TemplatesPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-5 sm:space-y-6 w-full max-w-full">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-[#E5E5E7] p-6 rounded-xl shadow-apple-card">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 bg-white border border-[#E5E5E7] p-4 sm:p-6 rounded-2xl md:rounded-xl shadow-apple-card max-w-full">
           <div>
             <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-[#0066CC]" />
-              <h1 className="text-xl font-bold tracking-tight text-[#1D1D1F]">
+              <Layers className="w-5 h-5 text-[#0066CC] shrink-0" />
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[#1D1D1F]">
                 Resume Templates Management
               </h1>
             </div>
-            <p className="text-xs text-[#555555] mt-1 max-w-2xl">
+            <p className="text-xs text-[#555555] mt-1 max-w-2xl leading-relaxed">
               Select or upload ATS-compliant DOCX resume templates. The selected template determines section ordering, typographic hierarchy, font families, and margins.
             </p>
           </div>
 
-          <div>
-            <label className="cursor-pointer">
+          <div className="self-start md:self-auto w-full sm:w-auto">
+            <label className="cursor-pointer block sm:inline-block">
               <input
                 type="file"
                 accept=".docx"
@@ -116,36 +116,36 @@ export default function TemplatesPage() {
                 onChange={handleUploadDocxTemplate}
                 disabled={isUploading}
               />
-              <span className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-[#0066CC] text-white rounded-lg hover:bg-[#0055b3] transition-colors shadow-sm">
-                <Upload className="w-3.5 h-3.5" />
-                {isUploading ? 'Uploading...' : 'Upload DOCX Template'}
+              <span className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[38px] text-xs font-semibold bg-[#0066CC] text-white rounded-xl hover:bg-[#0055b3] transition-all shadow-sm active:scale-95 touch-manipulation">
+                <Upload className="w-3.5 h-3.5 shrink-0" />
+                <span>{isUploading ? 'Uploading...' : 'Upload DOCX Template'}</span>
               </span>
             </label>
           </div>
         </div>
 
         {/* Templates Grid & Live Preview */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Templates List (8 cols) */}
-          <div className="lg:col-span-7 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 max-w-full">
+          {/* Templates List (7 cols) */}
+          <div className="lg:col-span-7 space-y-3.5 max-w-full">
             <h2 className="text-sm font-semibold text-[#1D1D1F]">
               Available Templates ({templates.length})
             </h2>
 
-            <div className="space-y-3">
+            <div className="space-y-3 max-w-full">
               {templates.map((tmpl) => (
                 <div
                   key={tmpl.id}
                   onClick={() => setSelectedPreview(tmpl)}
-                  className={`p-5 rounded-xl border cursor-pointer transition-all ${
+                  className={`p-4 sm:p-5 rounded-2xl border cursor-pointer transition-all max-w-full overflow-hidden ${
                     selectedPreview?.id === tmpl.id
-                      ? 'border-[#0066CC] bg-[#F0F7FF]/20 shadow-apple-card ring-1 ring-[#0066CC]'
+                      ? 'border-[#0066CC] bg-[#F0F7FF]/25 shadow-apple-card ring-1 ring-[#0066CC]'
                       : 'border-[#E5E5E7] bg-white hover:border-[#0071E3]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-semibold text-sm text-[#1D1D1F]">
                           {tmpl.name}
                         </span>
@@ -169,18 +169,18 @@ export default function TemplatesPage() {
                       </p>
                     </div>
 
-                    <div className="shrink-0 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="shrink-0 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                       {!tmpl.isDefault && (
                         <button
                           onClick={() => handleSetDefault(tmpl.id)}
-                          className="text-xs text-[#0066CC] hover:underline font-medium px-2 py-1"
+                          className="text-xs text-[#0066CC] hover:underline font-semibold px-2 py-1 active:scale-95 transition-all"
                         >
                           Make Default
                         </button>
                       )}
                       <button
                         onClick={() => setEditingTemplate(tmpl)}
-                        className="text-xs text-[#555555] hover:text-[#1D1D1F] p-1.5 rounded hover:bg-[#F5F5F7]"
+                        className="text-xs text-[#555555] hover:text-[#1D1D1F] p-1.5 rounded-lg hover:bg-[#F5F5F7] active:scale-95 transition-all"
                         title="Configure Sections"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
@@ -188,7 +188,7 @@ export default function TemplatesPage() {
                       {!tmpl.isBuiltIn && (
                         <button
                           onClick={() => handleDelete(tmpl.id)}
-                          className="text-xs text-red-500 hover:text-red-700 p-1.5 rounded hover:bg-red-50"
+                          className="text-xs text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 active:scale-95 transition-all"
                           title="Delete Template"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -197,9 +197,9 @@ export default function TemplatesPage() {
                     </div>
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-[#E5E5E7]/60 flex items-center justify-between text-[11px] text-[#555555]">
+                  <div className="mt-3 pt-2.5 border-t border-[#E5E5E7]/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#555555]">
                     <span>Font: {tmpl.fontFamily.split(',')[0]}</span>
-                    <span>Sections: {tmpl.sectionsOrder.join(' → ')}</span>
+                    <span className="truncate max-w-[200px] sm:max-w-none">Sections: {tmpl.sectionsOrder.join(' → ')}</span>
                   </div>
                 </div>
               ))}

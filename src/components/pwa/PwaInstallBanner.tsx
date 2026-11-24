@@ -45,12 +45,12 @@ export const PwaInstallBanner: React.FC = () => {
       {shouldShowBanner && !showIosGuide && (
         <aside
           aria-label="Install Application Suggestion"
-          className="no-print fixed bottom-20 md:bottom-6 left-3 right-3 md:left-auto md:right-6 md:max-w-md z-40 bg-white border border-[#E5E5E7] p-4 rounded-2xl shadow-apple-hover flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300"
+          className="no-print fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,12px))] md:bottom-6 left-3 right-3 md:left-auto md:right-6 md:max-w-md z-40 bg-white/95 backdrop-blur-md border border-[#E5E5E7] p-4 rounded-2xl shadow-apple-hover flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300 select-none"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-[#0066CC] flex items-center justify-center text-white shrink-0 shadow-sm">
-                <Sparkles className="w-6 h-6" />
+              <div className="w-11 h-11 rounded-xl bg-[#0066CC] flex items-center justify-center text-white shrink-0 shadow-sm">
+                <Sparkles className="w-5 h-5" />
               </div>
               <div className="min-w-0">
                 <h2 className="text-sm font-bold text-[#1D1D1F] tracking-tight">
@@ -63,19 +63,25 @@ export const PwaInstallBanner: React.FC = () => {
             </div>
 
             <button
-              onClick={dismissBanner}
+              onClick={() => {
+                haptics.selection();
+                dismissBanner();
+              }}
               aria-label="Dismiss install suggestion"
-              className="p-1 rounded-full text-[#888888] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors"
+              className="p-1.5 rounded-full text-[#888888] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] transition-all active:scale-90 touch-manipulation"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#F0F0F2]">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#F0F0F2]">
             <Button
               variant="ghost"
               size="sm"
-              onClick={dismissBanner}
+              onClick={() => {
+                haptics.selection();
+                dismissBanner();
+              }}
               className="text-xs text-[#666666]"
             >
               Not Now
@@ -85,7 +91,7 @@ export const PwaInstallBanner: React.FC = () => {
               pill
               onClick={() => promptInstall()}
               icon={isIos ? <Smartphone className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
-              className="text-xs px-4"
+              className="text-xs px-4 font-semibold"
             >
               {isIos ? 'How to Install' : 'INSTALL APP'}
             </Button>
@@ -99,9 +105,12 @@ export const PwaInstallBanner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="ios-install-title"
-          className="no-print fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
+          className="no-print fixed inset-0 z-50 bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
         >
-          <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl border border-[#E5E5E7] space-y-5 animate-in slide-in-from-bottom duration-300">
+          <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 pb-safe shadow-2xl border border-[#E5E5E7] space-y-4 animate-in slide-in-from-bottom duration-300">
+            {/* Grab Handle */}
+            <div className="w-12 h-1.5 bg-[#D1D1D6] rounded-full mx-auto mb-2 sm:hidden" />
+
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E7]">
               <div className="flex items-center gap-2.5">
@@ -119,10 +128,10 @@ export const PwaInstallBanner: React.FC = () => {
               </div>
               <button
                 onClick={() => {
-                  haptics.light();
+                  haptics.selection();
                   setShowIosGuide(false);
                 }}
-                className="p-1.5 rounded-full text-[#888888] hover:bg-[#F5F5F7]"
+                className="p-1.5 rounded-full text-[#888888] hover:bg-[#F5F5F7] active:scale-90 touch-manipulation transition-all"
               >
                 <X className="w-5 h-5" />
               </button>

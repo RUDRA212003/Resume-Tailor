@@ -49,17 +49,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, [user]);
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#F5F5F7]">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col md:flex-row bg-[#F5F5F7] w-full max-w-full overflow-x-hidden">
       {/* Desktop Sidebar (hidden on mobile) */}
-      <div className="no-print hidden md:block">
+      <div className="no-print hidden md:block shrink-0">
         <Sidebar />
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden">
         {/* Mobile Header (< md) */}
-        <header className="no-print flex md:hidden h-14 bg-white/90 backdrop-blur-md border-b border-[#E5E5E7] px-4 items-center justify-between sticky top-0 z-30">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#0066CC] flex items-center justify-center text-white shadow-xs">
+        <header className="no-print flex md:hidden h-14 bg-white/95 backdrop-blur-md border-b border-[#E5E5E7] px-3 sm:px-4 items-center justify-between sticky top-0 z-30 shrink-0 w-full max-w-full">
+          <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-[#0066CC] flex items-center justify-center text-white shadow-xs shrink-0">
               <Sparkles className="w-4 h-4" />
             </div>
             <div className="flex flex-col">
@@ -72,11 +72,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </div>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {user ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                {profileName.split(' ')[0]}
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 truncate max-w-[110px] sm:max-w-[140px]">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                <span className="truncate">{profileName.split(' ')[0]}</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#666666] bg-[#F0F0F2] px-2 py-0.5 rounded-full border border-[#E5E5E7]">
@@ -147,8 +147,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </div>
         </header>
 
-        {/* Main Content Area: Responsive padding with room for bottom bar */}
-        <main className="flex-1 px-3.5 py-4 sm:px-6 sm:py-6 md:p-8 pb-24 md:pb-8 overflow-y-auto overflow-x-hidden min-w-0 print:p-0 print:overflow-visible">
+        {/* Main Content Area: Responsive padding with safe room for bottom nav */}
+        <main className="flex-1 w-full max-w-full px-3 py-3.5 sm:px-6 sm:py-6 md:p-8 pb-28 md:pb-8 overflow-y-auto overflow-x-hidden min-w-0 print:p-0 print:overflow-visible">
           {children}
         </main>
 

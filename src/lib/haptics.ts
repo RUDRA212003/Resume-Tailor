@@ -51,11 +51,58 @@ class Haptics {
   }
 
   /**
+   * Alias for light() tap feedback
+   */
+  tap(): boolean {
+    return this.light();
+  }
+
+  /**
    * Selection tick (10ms)
    * Ideal for tab switching, segmented controls, and bottom navigation.
    */
   selection(): boolean {
     return this.trigger(10);
+  }
+
+  /**
+   * Form control toggle tick (12ms)
+   * Ideal for checkboxes, radio buttons, and switch toggles.
+   */
+  toggle(): boolean {
+    return this.trigger(12);
+  }
+
+  /**
+   * Loading start tactile indicator (10ms)
+   * Informs user their action has been registered and is processing.
+   */
+  loadingStart(): boolean {
+    return this.trigger(10);
+  }
+
+  /**
+   * Loading complete with success [15ms, 60ms pause, 15ms]
+   */
+  loadingSuccess(): boolean {
+    return this.success();
+  }
+
+  /**
+   * Loading complete with failure [40ms, 60ms pause, 40ms]
+   */
+  loadingError(): boolean {
+    return this.error();
+  }
+
+  /**
+   * Context-aware button press haptic feedback
+   */
+  buttonPress(variant?: string): boolean {
+    if (variant === 'danger') {
+      return this.impactHeavy();
+    }
+    return this.light();
   }
 
   /**

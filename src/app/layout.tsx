@@ -41,8 +41,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="antialiased selection:bg-[#0066CC]/20 selection:text-[#0066CC] min-h-screen" suppressHydrationWarning>
+    <html lang="en" className="w-full max-w-full overflow-x-hidden" suppressHydrationWarning>
+      <body className="antialiased selection:bg-[#0066CC]/20 selection:text-[#0066CC] min-h-screen min-h-[100dvh] w-full max-w-full overflow-x-hidden" suppressHydrationWarning>
         <Auth0Provider>
           <AuthModalProvider>
             <PwaProvider>

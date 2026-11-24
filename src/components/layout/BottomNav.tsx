@@ -127,14 +127,17 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <div className="fixed inset-0 z-50 md:hidden flex flex-col justify-end">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsMoreOpen(false)}
+            className="fixed inset-0 bg-black/45 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+            onClick={() => {
+              haptics.selection();
+              setIsMoreOpen(false);
+            }}
           />
 
           {/* Sheet Content */}
-          <div className="relative bg-white rounded-t-2xl border-t border-[#E5E5E7] shadow-2xl p-5 max-h-[85vh] overflow-y-auto z-10 animate-in slide-in-from-bottom duration-200">
+          <div className="relative bg-white rounded-t-3xl border-t border-[#E5E5E7] shadow-2xl p-5 max-h-[88vh] pb-safe overflow-y-auto z-10 animate-in slide-in-from-bottom duration-250 ease-out">
             {/* Grab Handle */}
-            <div className="w-10 h-1 bg-[#D1D1D6] rounded-full mx-auto mb-4" />
+            <div className="w-12 h-1.5 bg-[#D1D1D6] rounded-full mx-auto mb-4" />
 
             <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E7]">
               <div>
@@ -142,8 +145,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 <p className="text-xs text-[#666666]">Additional views &amp; platform settings</p>
               </div>
               <button
-                onClick={() => setIsMoreOpen(false)}
-                className="w-8 h-8 rounded-full bg-[#F5F5F7] flex items-center justify-center text-[#555555] active:scale-95"
+                onClick={() => {
+                  haptics.selection();
+                  setIsMoreOpen(false);
+                }}
+                className="w-9 h-9 rounded-full bg-[#F5F5F7] flex items-center justify-center text-[#555555] active:scale-90 touch-manipulation transition-all"
                 aria-label="Close menu"
               >
                 <X className="w-4 h-4" />
@@ -291,12 +297,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         </div>
       )}
 
-      {/* Modern iOS-Style Bottom Navigation Bar */}
+      {/* Premium Native-Feel iOS/Android Bottom Navigation Bar */}
       <nav
-        aria-label="Mobile Navigation"
-        className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white/95 backdrop-blur-xl border-t border-[#E5E5E7] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-safe select-none"
+        aria-label="Mobile Application Navigation"
+        className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white/95 backdrop-blur-xl border-t border-[#E5E5E7] shadow-[0_-4px_24px_rgba(0,0,0,0.07)] pb-safe select-none"
       >
-        <div className="flex items-center justify-around h-16 px-1 max-w-lg mx-auto">
+        <div className="flex items-center justify-around h-16 px-1.5 max-w-md mx-auto w-full relative">
           {/* Dashboard and Profile */}
           {mainTabs.slice(0, 2).map((tab) => {
             const isActive = pathname === tab.href;
@@ -306,40 +312,58 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 key={tab.href}
                 href={tab.href}
                 onClick={(e) => handleTabClick(e, tab.href, tab.name)}
-                className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-all ${
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-center transition-all duration-200 relative group touch-manipulation active:scale-95 ${
                   isActive
-                    ? 'text-[#0066CC] font-semibold'
+                    ? 'text-[#0066CC]'
                     : 'text-[#666666] hover:text-[#1D1D1F]'
                 }`}
               >
-                <div className="relative">
-                  <Icon className={`w-5 h-5 ${isActive ? 'scale-110' : ''} transition-transform`} />
-                  {isActive && (
-                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#0066CC]" />
-                  )}
+                <div
+                  className={`flex flex-col items-center justify-center px-3 py-1 rounded-2xl transition-all duration-200 ${
+                    isActive ? 'bg-[#0066CC]/10' : ''
+                  }`}
+                >
+                  <div className="relative">
+                    <Icon
+                      className={`w-5 h-5 transition-transform duration-200 ${
+                        isActive ? 'scale-110 text-[#0066CC]' : 'text-[#666666]'
+                      }`}
+                    />
+                    {isActive && (
+                      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#0066CC] shadow-xs animate-in zoom-in-75 duration-200" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-[10px] mt-0.5 tracking-tight transition-all ${
+                      isActive ? 'font-bold text-[#0066CC]' : 'font-medium text-[#666666]'
+                    }`}
+                  >
+                    {tab.name}
+                  </span>
                 </div>
-                <span className="text-[10px] mt-1 tracking-tight">{tab.name}</span>
               </Link>
             );
           })}
 
-          {/* Elevated Center Action Button: Tailor */}
+          {/* Elevated Center Floating Action Button: Tailor Studio */}
           <Link
             href="/tailor"
             onClick={(e) => handleTabClick(e, '/tailor', 'Tailor Studio')}
-            className="flex flex-col items-center justify-center flex-1 h-full py-1 group"
+            aria-current={pathname === '/tailor' ? 'page' : undefined}
+            className="flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-0 relative -top-2 group touch-manipulation active:scale-90 transition-transform duration-150"
           >
             <div
-              className={`w-11 h-11 rounded-full flex items-center justify-center shadow-md transition-all active:scale-95 ${
+              className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 ring-4 ring-white ${
                 pathname === '/tailor'
-                  ? 'bg-[#0066CC] text-white ring-4 ring-[#0066CC]/20 shadow-blue-500/30'
-                  : 'bg-gradient-to-tr from-[#0066CC] to-[#2997FF] text-white shadow-blue-500/20 hover:shadow-blue-500/40'
+                  ? 'bg-gradient-to-tr from-[#0052A3] to-[#0066CC] text-white shadow-blue-500/40 ring-blue-100/80 scale-105'
+                  : 'bg-gradient-to-tr from-[#0066CC] via-[#0071E3] to-[#2997FF] text-white shadow-blue-500/30 hover:shadow-blue-500/50'
               }`}
             >
-              <Sparkles className="w-5 h-5 animate-pulse" />
+              <Sparkles className="w-6 h-6 animate-pulse" />
             </div>
             <span
-              className={`text-[10px] mt-0.5 font-bold tracking-tight ${
+              className={`text-[10px] mt-0.5 font-bold tracking-tight transition-colors ${
                 pathname === '/tailor' ? 'text-[#0066CC]' : 'text-[#1D1D1F]'
               }`}
             >
@@ -356,19 +380,36 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 key={tab.href}
                 href={tab.href}
                 onClick={(e) => handleTabClick(e, tab.href, tab.name)}
-                className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-all ${
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-center transition-all duration-200 relative group touch-manipulation active:scale-95 ${
                   isActive
-                    ? 'text-[#0066CC] font-semibold'
+                    ? 'text-[#0066CC]'
                     : 'text-[#666666] hover:text-[#1D1D1F]'
                 }`}
               >
-                <div className="relative">
-                  <Icon className={`w-5 h-5 ${isActive ? 'scale-110' : ''} transition-transform`} />
-                  {isActive && (
-                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#0066CC]" />
-                  )}
+                <div
+                  className={`flex flex-col items-center justify-center px-3 py-1 rounded-2xl transition-all duration-200 ${
+                    isActive ? 'bg-[#0066CC]/10' : ''
+                  }`}
+                >
+                  <div className="relative">
+                    <Icon
+                      className={`w-5 h-5 transition-transform duration-200 ${
+                        isActive ? 'scale-110 text-[#0066CC]' : 'text-[#666666]'
+                      }`}
+                    />
+                    {isActive && (
+                      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#0066CC] shadow-xs animate-in zoom-in-75 duration-200" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-[10px] mt-0.5 tracking-tight transition-all ${
+                      isActive ? 'font-bold text-[#0066CC]' : 'font-medium text-[#666666]'
+                    }`}
+                  >
+                    {tab.name}
+                  </span>
                 </div>
-                <span className="text-[10px] mt-1 tracking-tight">{tab.name}</span>
               </Link>
             );
           })}
@@ -379,19 +420,37 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               haptics.impactMedium();
               setIsMoreOpen(true);
             }}
-            className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-all ${
+            aria-expanded={isMoreOpen}
+            aria-label="Open more menu"
+            className={`flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-center transition-all duration-200 relative group touch-manipulation active:scale-95 ${
               isMoreActive || isMoreOpen
-                ? 'text-[#0066CC] font-semibold'
+                ? 'text-[#0066CC]'
                 : 'text-[#666666] hover:text-[#1D1D1F]'
             }`}
           >
-            <div className="relative">
-              <Menu className={`w-5 h-5 ${isMoreActive || isMoreOpen ? 'scale-110' : ''} transition-transform`} />
-              {isMoreActive && (
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#0066CC]" />
-              )}
+            <div
+              className={`flex flex-col items-center justify-center px-3 py-1 rounded-2xl transition-all duration-200 ${
+                isMoreActive || isMoreOpen ? 'bg-[#0066CC]/10' : ''
+              }`}
+            >
+              <div className="relative">
+                <Menu
+                  className={`w-5 h-5 transition-transform duration-200 ${
+                    isMoreActive || isMoreOpen ? 'scale-110 text-[#0066CC]' : 'text-[#666666]'
+                  }`}
+                />
+                {isMoreActive && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#0066CC] shadow-xs animate-in zoom-in-75 duration-200" />
+                )}
+              </div>
+              <span
+                className={`text-[10px] mt-0.5 tracking-tight transition-all ${
+                  isMoreActive || isMoreOpen ? 'font-bold text-[#0066CC]' : 'font-medium text-[#666666]'
+                }`}
+              >
+                More
+              </span>
             </div>
-            <span className="text-[10px] mt-1 tracking-tight">More</span>
           </button>
         </div>
       </nav>

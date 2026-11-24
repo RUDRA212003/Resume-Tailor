@@ -233,11 +233,13 @@ function TailorPageContent() {
   // Step 1 -> Step 2: Analyze Job Description
   const handleAnalyzeJD = async () => {
     if (!rawText.trim()) {
+      haptics.warning();
       alert('Please enter or upload a job description.');
       return;
     }
 
     setIsAnalyzing(true);
+    haptics.loadingStart();
     const jdData: JobDescription = {
       id: `jd-${Date.now()}`,
       companyName: companyName.trim() || 'Company',
@@ -263,8 +265,10 @@ function TailorPageContent() {
       setCurrentJd(jdData);
       setAnalysis(analysisData);
       setCurrentStep(2);
+      haptics.success();
     } catch (err) {
       console.error(err);
+      haptics.error();
       alert('Analysis failed. Please check network connection.');
     } finally {
       setIsAnalyzing(false);
@@ -498,6 +502,7 @@ function TailorPageContent() {
     if (!currentJd || !analysis) return;
 
     setIsGenerating(true);
+    haptics.loadingStart();
     setGenerationPhase('Sanitizing personal data for privacy...');
 
     const chosenTemplate = templates.find((t) => t.id === selectedTemplateId) || templates[0];
@@ -544,9 +549,11 @@ function TailorPageContent() {
 
       setTailoredResume(tailoredData);
       setCurrentStep(3);
+      haptics.success();
       handleQuickAtsScan(tailoredData);
     } catch (err) {
       console.error(err);
+      haptics.error();
       alert('Generation error. Please retry.');
     } finally {
       setIsGenerating(false);
@@ -962,7 +969,8 @@ function TailorPageContent() {
                   pill
                   onClick={handleAnalyzeJD}
                   isLoading={isAnalyzing}
-                  icon={<Sparkles className="w-4 h-4" />}
+                  icon={<Sparkles className="w-4 h-4 shrink-0" />}
+                  className="w-full sm:w-auto font-semibold shadow-sm"
                 >
                   Analyze Job Description
                 </Button>
@@ -1372,7 +1380,8 @@ function TailorPageContent() {
                   pill
                   onClick={handleGenerateTailoredResume}
                   isLoading={isGenerating}
-                  icon={<Sparkles className="w-4 h-4" />}
+                  icon={<Sparkles className="w-4 h-4 shrink-0" />}
+                  className="w-full sm:w-auto font-semibold shadow-sm"
                 >
                   Generate Tailored Resume
                 </Button>

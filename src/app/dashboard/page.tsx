@@ -160,47 +160,49 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-6xl mx-auto space-y-5 sm:space-y-8 w-full max-w-full">
         {/* Welcome & Quick Action Hero */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-[#E5E5E7] p-8 rounded-xl shadow-apple-card">
-          <div className="space-y-1.5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-[#E5E5E7] p-5 sm:p-7 md:p-8 rounded-2xl md:rounded-xl shadow-apple-card max-w-full">
+          <div className="space-y-1.5 min-w-0">
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0066CC] uppercase tracking-wider">
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-4 h-4 shrink-0" />
               <span>ResumeCraft Studio</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#1D1D1F]">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1D1D1F] break-words">
               {user ? `Welcome back, ${displayName}` : 'Welcome to ResumeCraft Studio'}
             </h1>
-            <p className="text-sm text-[#555555] max-w-xl">
+            <p className="text-xs sm:text-sm text-[#555555] max-w-xl leading-relaxed">
               {user
                 ? 'Tailor ATS-optimized resumes aligned with any job description in seconds. Factual accuracy strictly guaranteed from your verified profile repository.'
                 : 'Create ATS-optimized resumes tailored precisely to any job description. Sign in to access your private workspace, track applications, and export high-scoring resumes.'}
             </p>
           </div>
 
-          <div className="shrink-0 flex items-center gap-3">
+          <div className="shrink-0 flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-[#E5E5E7]">
             {user ? (
               <>
                 <Link
                   href="/profile"
                   onClick={(e) => handleProtectedClick(e, '/profile', 'Profile Management')}
+                  className="flex-1 sm:flex-none"
                 >
-                  <Button variant="secondary" size="md">
+                  <Button variant="secondary" size="md" fullWidth className="text-xs sm:text-sm">
                     Edit Profile
                   </Button>
                 </Link>
                 <Link
                   href="/tailor"
                   onClick={(e) => handleProtectedClick(e, '/tailor', 'Resume Tailoring Studio')}
+                  className="flex-1 sm:flex-none"
                 >
-                  <Button size="md" pill icon={<Sparkles className="w-4 h-4" />}>
+                  <Button size="md" pill icon={<Sparkles className="w-4 h-4 shrink-0" />} fullWidth className="text-xs sm:text-sm font-semibold">
                     Create Tailored Resume
                   </Button>
                 </Link>
               </>
             ) : (
-              <a href="/auth/login?returnTo=/dashboard">
-                <Button size="md" pill icon={<LogIn className="w-4 h-4" />}>
+              <a href="/auth/login?returnTo=/dashboard" className="w-full sm:w-auto">
+                <Button size="md" pill icon={<LogIn className="w-4 h-4 shrink-0" />} fullWidth className="text-xs sm:text-sm font-semibold">
                   Sign In / Get Started
                 </Button>
               </a>
@@ -208,8 +210,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 4 Primary Stats Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 4 Primary Stats Overview: 2-col on mobile, 4-col on desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 max-w-full">
           <Card>
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-[#555555]">Resumes Generated</p>
@@ -362,29 +364,30 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 tailoredResumes.slice(0, 4).map((resume) => (
-                  <div key={resume.id} className="py-3.5 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="font-medium text-xs text-[#1D1D1F] truncate">
+                  <div key={resume.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 max-w-full">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-xs sm:text-sm text-[#1D1D1F] truncate" title={resume.title}>
                         {resume.title}
                       </p>
-                      <div className="flex items-center gap-2 mt-1 text-[11px] text-[#555555]">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1 text-[11px] text-[#555555]">
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
+                          <Clock className="w-3 h-3 text-[#777777]" />
                           {mounted ? new Date(resume.createdAt).toLocaleDateString() : ''}
                         </span>
                         <span>•</span>
-                        <span className="text-emerald-700 font-medium">
+                        <span className="text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
                           {resume.analysis?.relevanceScore ?? 92}% Match
                         </span>
                       </div>
                     </div>
 
-                    <div className="shrink-0 flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                       <Link href={`/tailor?resumeId=${resume.id}`}>
                         <Button
                           size="sm"
                           pill
-                          icon={<Sparkles className="w-3.5 h-3.5" />}
+                          icon={<Sparkles className="w-3.5 h-3.5 shrink-0" />}
+                          className="px-3"
                         >
                           Open
                         </Button>
@@ -393,7 +396,7 @@ export default function DashboardPage() {
                         variant="secondary"
                         size="sm"
                         onClick={() => downloadPdf(resume)}
-                        icon={<Download className="w-3.5 h-3.5" />}
+                        icon={<Download className="w-3.5 h-3.5 shrink-0" />}
                       >
                         PDF
                       </Button>
@@ -401,7 +404,7 @@ export default function DashboardPage() {
                         variant="secondary"
                         size="sm"
                         onClick={() => downloadDocx(resume)}
-                        icon={<Download className="w-3.5 h-3.5" />}
+                        icon={<Download className="w-3.5 h-3.5 shrink-0" />}
                       >
                         DOCX
                       </Button>
@@ -409,7 +412,7 @@ export default function DashboardPage() {
                         variant="secondary"
                         size="sm"
                         onClick={() => shareResume(resume)}
-                        icon={<Share2 className="w-3.5 h-3.5" />}
+                        icon={<Share2 className="w-3.5 h-3.5 shrink-0" />}
                         title="Share resume natively"
                       >
                         Share
@@ -475,9 +478,9 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 jobDescriptions.slice(0, 4).map((jd) => (
-                  <div key={jd.id} className="py-3.5 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="font-medium text-xs text-[#1D1D1F] truncate">
+                  <div key={jd.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 max-w-full">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-xs sm:text-sm text-[#1D1D1F] truncate" title={`${jd.jobTitle} at ${jd.companyName}`}>
                         {jd.jobTitle} at {jd.companyName}
                       </p>
                       <div className="flex items-center gap-2 mt-1 text-[11px] text-[#555555]">
@@ -487,11 +490,13 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    <Link href={`/tailor?jdId=${jd.id}`}>
-                      <Button variant="secondary" size="sm">
-                        Tailor Again
-                      </Button>
-                    </Link>
+                    <div className="shrink-0 self-start sm:self-auto">
+                      <Link href={`/tailor?jdId=${jd.id}`}>
+                        <Button variant="secondary" size="sm">
+                          Tailor Again
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 ))
               )}

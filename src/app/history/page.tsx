@@ -94,30 +94,30 @@ export default function HistoryPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-5 sm:space-y-6 w-full max-w-full">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-[#E5E5E7] p-6 rounded-xl shadow-apple-card">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 bg-white border border-[#E5E5E7] p-4 sm:p-6 rounded-2xl md:rounded-xl shadow-apple-card max-w-full">
           <div>
             <div className="flex items-center gap-2">
-              <History className="w-5 h-5 text-[#0066CC]" />
-              <h1 className="text-xl font-bold tracking-tight text-[#1D1D1F]">
+              <History className="w-5 h-5 text-[#0066CC] shrink-0" />
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[#1D1D1F]">
                 Generation History & Fact Audit Log
               </h1>
             </div>
-            <p className="text-xs text-[#555555] mt-1">
+            <p className="text-xs text-[#555555] mt-1 leading-relaxed">
               Complete audit history of all generated resumes, including factual verification reports, profile snapshot IDs, and change summaries.
             </p>
           </div>
 
-          <Link href="/tailor">
-            <Button size="sm" pill icon={<Sparkles className="w-3.5 h-3.5" />}>
+          <Link href="/tailor" className="self-start md:self-auto">
+            <Button size="sm" pill icon={<Sparkles className="w-3.5 h-3.5 shrink-0" />} className="font-semibold">
               Create Tailored Resume
             </Button>
           </Link>
         </div>
 
         {/* History Feed */}
-        <div className="space-y-4">
+        <div className="space-y-3.5 max-w-full">
           {resumes.length === 0 ? (
             <Card className="text-center py-12 space-y-3">
               <History className="w-10 h-10 text-[#AAAAAA] mx-auto opacity-50" />
@@ -130,39 +130,41 @@ export default function HistoryPage() {
             </Card>
           ) : (
             resumes.map((resume) => (
-              <Card key={resume.id} className="p-5 space-y-4">
+              <Card key={resume.id} className="p-4 sm:p-5 space-y-3.5 max-w-full">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E5E7] pb-3">
-                  <div>
-                    <h3 className="font-semibold text-sm text-[#1D1D1F]">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-sm text-[#1D1D1F] truncate" title={resume.title}>
                       {resume.title}
                     </h3>
-                    <div className="flex items-center gap-2 mt-0.5 text-xs text-[#555555]">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5" />
+                    <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-[#555555]">
+                      <span className="flex items-center gap-1 text-[11px]">
+                        <Calendar className="w-3.5 h-3.5 text-[#777777]" />
                         {mounted ? new Date(resume.createdAt).toLocaleString() : ''}
                       </span>
                       <span>•</span>
-                      <span className="text-[#0066CC] font-medium">
+                      <span className="text-[#0066CC] font-semibold text-[11px] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                         Relevance: {resume.analysis?.relevanceScore || 90}%
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 shrink-0 pt-2 sm:pt-0">
                     <Link href={`/tailor?resumeId=${resume.id}`}>
                       <Button
                         size="sm"
                         pill
-                        icon={<Sparkles className="w-3.5 h-3.5" />}
+                        icon={<Sparkles className="w-3.5 h-3.5 shrink-0" />}
+                        className="px-3"
                       >
-                        Open / Edit Resume
+                        <span className="hidden sm:inline">Open / Edit Resume</span>
+                        <span className="sm:hidden">Open</span>
                       </Button>
                     </Link>
                     <Button
                       variant="secondary"
                       size="sm"
                       onClick={() => downloadPdf(resume)}
-                      icon={<Download className="w-3.5 h-3.5" />}
+                      icon={<Download className="w-3.5 h-3.5 shrink-0" />}
                     >
                       PDF
                     </Button>
@@ -170,7 +172,7 @@ export default function HistoryPage() {
                       variant="secondary"
                       size="sm"
                       onClick={() => downloadDocx(resume)}
-                      icon={<Download className="w-3.5 h-3.5" />}
+                      icon={<Download className="w-3.5 h-3.5 shrink-0" />}
                     >
                       DOCX
                     </Button>
@@ -178,25 +180,25 @@ export default function HistoryPage() {
                 </div>
 
                 {/* Verification Report Snippet */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="p-3 bg-[#FBFBFC] rounded-lg border border-[#E5E5E7]">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs max-w-full">
+                  <div className="p-2.5 bg-[#FBFBFC] rounded-xl border border-[#E5E5E7]">
                     <p className="text-[11px] text-[#555555]">Factual Grounding</p>
-                    <p className="font-semibold text-emerald-700 flex items-center gap-1 mt-0.5">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      100% Verified Profile Facts
+                    <p className="font-semibold text-emerald-700 flex items-center gap-1 mt-0.5 text-xs">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      100% Verified Facts
                     </p>
                   </div>
 
-                  <div className="p-3 bg-[#FBFBFC] rounded-lg border border-[#E5E5E7]">
+                  <div className="p-2.5 bg-[#FBFBFC] rounded-xl border border-[#E5E5E7]">
                     <p className="text-[11px] text-[#555555]">Facts Checked</p>
-                    <p className="font-semibold text-[#1D1D1F] mt-0.5">
-                      {resume.validationReport?.checkedFactsCount || 18} Profile Data Points
+                    <p className="font-semibold text-[#1D1D1F] mt-0.5 text-xs">
+                      {resume.validationReport?.checkedFactsCount || 18} Profile Points
                     </p>
                   </div>
 
-                  <div className="p-3 bg-[#FBFBFC] rounded-lg border border-[#E5E5E7]">
+                  <div className="p-2.5 bg-[#FBFBFC] rounded-xl border border-[#E5E5E7]">
                     <p className="text-[11px] text-[#555555]">Changes & Refinements</p>
-                    <p className="font-semibold text-[#0066CC] mt-0.5">
+                    <p className="font-semibold text-[#0066CC] mt-0.5 text-xs">
                       {resume.diff?.rewrittenCount || 3} Refined, {resume.diff?.omittedCount || 4} Filtered
                     </p>
                   </div>

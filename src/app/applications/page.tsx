@@ -126,37 +126,37 @@ export default function ApplicationsPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-5 sm:space-y-6 w-full max-w-full">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-[#E5E5E7] p-6 rounded-xl shadow-apple-card">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 bg-white border border-[#E5E5E7] p-4 sm:p-6 rounded-2xl md:rounded-xl shadow-apple-card max-w-full">
           <div>
             <div className="flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-[#0066CC]" />
-              <h1 className="text-xl font-bold tracking-tight text-[#1D1D1F]">
+              <Briefcase className="w-5 h-5 text-[#0066CC] shrink-0" />
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[#1D1D1F]">
                 My Saved Applications
               </h1>
             </div>
-            <p className="text-xs text-[#555555] mt-1">
+            <p className="text-xs text-[#555555] mt-1 leading-relaxed">
               Track job applications, match relevance, and immutable tailored resume snapshots. Updating your profile never alters previously generated resumes.
             </p>
           </div>
 
-          <Link href="/tailor">
-            <Button size="sm" pill icon={<Sparkles className="w-3.5 h-3.5" />}>
+          <Link href="/tailor" className="self-start md:self-auto">
+            <Button size="sm" pill icon={<Sparkles className="w-3.5 h-3.5 shrink-0" />} className="font-semibold">
               Tailor New Resume
             </Button>
           </Link>
         </div>
 
         {/* Filter bar */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 max-w-full">
           {['All', 'Applied', 'Interviewing', 'Offer', 'Draft', 'Archived'].map((status) => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 active:scale-95 touch-manipulation ${
                 filterStatus === status
-                  ? 'bg-[#0066CC] text-white'
+                  ? 'bg-[#0066CC] text-white shadow-xs font-semibold'
                   : 'bg-white border border-[#E5E5E7] text-[#1D1D1F] hover:bg-[#F5F5F7]'
               }`}
             >
@@ -166,7 +166,7 @@ export default function ApplicationsPage() {
         </div>
 
         {/* Applications List */}
-        <div className="space-y-3">
+        <div className="space-y-3 max-w-full">
           {filteredApps.length === 0 ? (
             <Card className="text-center py-12 space-y-3">
               <Building className="w-10 h-10 text-[#AAAAAA] mx-auto opacity-50" />
@@ -179,20 +179,24 @@ export default function ApplicationsPage() {
             </Card>
           ) : (
             filteredApps.map((app) => (
-              <Card key={app.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-sm text-[#1D1D1F]">{app.jobTitle}</h3>
+              <Card key={app.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3.5 max-w-full">
+                <div className="space-y-1.5 min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <h3 className="font-semibold text-sm text-[#1D1D1F] truncate" title={app.jobTitle}>
+                      {app.jobTitle}
+                    </h3>
                     <span className="text-xs text-[#555555]">at</span>
-                    <span className="font-semibold text-sm text-[#0066CC]">{app.companyName}</span>
+                    <span className="font-semibold text-sm text-[#0066CC] truncate" title={app.companyName}>
+                      {app.companyName}
+                    </span>
                     <Badge variant="available" size="sm">
                       {app.relevanceScore}% Match
                     </Badge>
                   </div>
 
-                  <div className="flex items-center gap-3 text-[11px] text-[#666666]">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#666666]">
                     <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
+                      <Clock className="w-3 h-3 text-[#777777]" />
                       Applied: {mounted ? new Date(app.createdAt).toLocaleDateString() : ''}
                     </span>
                     {app.location && <span>• {app.location}</span>}
@@ -209,11 +213,11 @@ export default function ApplicationsPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-[#E5E5E7]">
                   <select
                     value={app.status}
                     onChange={(e) => handleStatusChange(app.id, e.target.value as any)}
-                    className="text-xs px-2.5 py-1.5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-lg text-[#1D1D1F]"
+                    className="text-xs px-2.5 py-1.5 min-h-[36px] bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl text-[#1D1D1F] font-medium"
                   >
                     <option value="Draft">Draft</option>
                     <option value="Applied">Applied</option>
@@ -226,7 +230,8 @@ export default function ApplicationsPage() {
                     <Button
                       size="sm"
                       pill
-                      icon={<Sparkles className="w-3.5 h-3.5" />}
+                      icon={<Sparkles className="w-3.5 h-3.5 shrink-0" />}
+                      className="px-3"
                     >
                       View Resume
                     </Button>
@@ -236,7 +241,7 @@ export default function ApplicationsPage() {
                     variant="secondary"
                     size="sm"
                     onClick={() => downloadPdf(app)}
-                    icon={<Download className="w-3.5 h-3.5" />}
+                    icon={<Download className="w-3.5 h-3.5 shrink-0" />}
                   >
                     PDF
                   </Button>
@@ -245,14 +250,14 @@ export default function ApplicationsPage() {
                     variant="secondary"
                     size="sm"
                     onClick={() => downloadDocx(app)}
-                    icon={<Download className="w-3.5 h-3.5" />}
+                    icon={<Download className="w-3.5 h-3.5 shrink-0" />}
                   >
                     DOCX
                   </Button>
 
                   <button
                     onClick={() => handleDelete(app.id)}
-                    className="p-2 text-red-500 hover:text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                    className="p-2 text-rose-500 hover:text-rose-700 rounded-xl hover:bg-rose-50 transition-colors active:scale-95 touch-manipulation"
                     title="Delete Application"
                   >
                     <Trash2 className="w-4 h-4" />

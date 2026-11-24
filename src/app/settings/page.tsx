@@ -75,22 +75,22 @@ export default function SettingsPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-5 sm:space-y-6 w-full max-w-full">
         {/* Header */}
-        <div className="flex items-center justify-between bg-white border border-[#E5E5E7] p-6 rounded-xl shadow-apple-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 bg-white border border-[#E5E5E7] p-4 sm:p-6 rounded-2xl md:rounded-xl shadow-apple-card max-w-full">
           <div>
             <div className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-[#0066CC]" />
-              <h1 className="text-xl font-bold tracking-tight text-[#1D1D1F]">
+              <Settings className="w-5 h-5 text-[#0066CC] shrink-0" />
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[#1D1D1F]">
                 Application Settings
               </h1>
             </div>
-            <p className="text-xs text-[#555555] mt-1">
+            <p className="text-xs text-[#555555] mt-1 leading-relaxed">
               Configure AI models, privacy filters, and database connectivity.
             </p>
           </div>
 
-          <Button size="sm" onClick={handleSave}>
+          <Button size="sm" pill onClick={handleSave} className="self-start sm:self-auto font-semibold px-4">
             {saveSuccess ? 'Saved!' : 'Save Settings'}
           </Button>
         </div>
