@@ -10,11 +10,19 @@ export const isAuth0Configured = (): boolean => {
   );
 };
 
+export const getAppBaseUrl = (): string => {
+  if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL;
+  if (process.env.AUTH0_BASE_URL) return process.env.AUTH0_BASE_URL;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:3000';
+};
+
 // Singleton Auth0 client for server-side operations, session retrieval, and middleware
 export const auth0 = new Auth0Client({
-  domain: process.env.AUTH0_DOMAIN || 'resumecraft-demo.us.auth0.com',
-  clientId: process.env.AUTH0_CLIENT_ID || 'build_time_auth0_client_id',
-  clientSecret: process.env.AUTH0_CLIENT_SECRET || 'build_time_auth0_client_secret',
-  secret: process.env.AUTH0_SECRET || 'a-secure-default-development-secret-that-is-at-least-32-bytes-long',
-  appBaseUrl: process.env.APP_BASE_URL || process.env.AUTH0_BASE_URL || 'http://localhost:3000',
+  domain: process.env.AUTH0_DOMAIN || 'dev-nu23ezauft0ix6uk.us.auth0.com',
+  clientId: process.env.AUTH0_CLIENT_ID || 'x8QUPvwkJTRHuVlLJdgmAQmZRwOPzVqD',
+  clientSecret: process.env.AUTH0_CLIENT_SECRET || 'tL3Z7z-rfcvNQD7vcsDLGyOXXJ9vq38tz4-30eJcCLFYWtr5sod_p57Tamnc7Y6V',
+  secret: process.env.AUTH0_SECRET || '269adab4acda30b6e66935916f9c164fbfcb6d35ccb0eb3c7fb8e42a4d968155',
+  appBaseUrl: getAppBaseUrl(),
 });
