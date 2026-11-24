@@ -1,11 +1,23 @@
+import fs from 'fs';
+import path from 'path';
+
 /**
  * Ensures standard PDFKit fonts (Helvetica, Times-Roman, Courier, etc.) are traced
  * and packaged into Vercel Serverless Function bundles.
  * 
- * Vercel's Node File Trace (NFT) strips non-statically imported files by default.
- * These static imports guarantee that standard-fonts/*.cjs are bundled on AWS Lambda.
+ * Vercel's Node File Trace (NFT) statically evaluates top-level fs.readdirSync to detect
+ * and bundle all assets in the target directory including .cjs files and chunks.
+ * Note: Kept strictly standard JavaScript without type annotations so Acorn AST parser
+ * doesn't abort traversal during Vercel NFT bundling.
  */
-export function ensureStandardFonts(): void {
+try {
+  // Explicit top-level static evaluation for NFT AST analyzer
+  fs.readdirSync(path.join(process.cwd(), 'node_modules/pdfkit/js/standard-fonts'));
+} catch (e) {
+  // Graceful fallback for environments where directory is virtualized
+}
+
+export function ensureStandardFonts() {
   try {
     require('pdfkit/standard-fonts/Helvetica');
     require('pdfkit/standard-fonts/HelveticaBold');
@@ -19,7 +31,7 @@ export function ensureStandardFonts(): void {
     require('pdfkit/standard-fonts/CourierBold');
     require('pdfkit/standard-fonts/Symbol');
     require('pdfkit/standard-fonts/ZapfDingbats');
-  } catch {
+  } catch (e) {
     // Graceful fallback for non-Node environments
   }
 }

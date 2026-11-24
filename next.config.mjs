@@ -9,10 +9,6 @@ const nextConfig = {
       '@react-pdf/renderer',
       'pdfkit',
     ],
-    outputFileTracingIncludes: {
-      '/api/export/pdf': ['./node_modules/pdfkit/js/standard-fonts/**/*'],
-      '/api/export/cover-letter-pdf': ['./node_modules/pdfkit/js/standard-fonts/**/*'],
-    },
   },
   webpack: (config, { isServer }) => {
     config.resolve.alias.canvas = false;

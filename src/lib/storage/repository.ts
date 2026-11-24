@@ -14,7 +14,7 @@ import {
 } from './defaultData';
 
 const STORAGE_KEYS = {
-  PROFILE: 'resumecraft_profile_v4_rudresh',
+  PROFILE: 'resumecraft_profile_v5',
   TEMPLATES: 'resumecraft_templates_v3_ats',
   JOB_DESCRIPTIONS: 'resumecraft_jds_v1',
   ANALYSES: 'resumecraft_analyses_v1',
@@ -22,6 +22,12 @@ const STORAGE_KEYS = {
   APPLICATIONS: 'resumecraft_applications_v1',
   SETTINGS: 'resumecraft_settings_v1',
 };
+
+function getUserStorageKey(baseKey: string, userId?: string): string {
+  if (!userId) return baseKey;
+  const cleanId = userId.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return `${baseKey}_${cleanId}`;
+}
 
 // In-memory fallback cache for SSR or node environments
 const memoryStore: Record<string, unknown> = {};
@@ -31,9 +37,6 @@ function safeGetItem<T>(key: string, defaultValue: T): T {
     return (memoryStore[key] as T) ?? defaultValue;
   }
   try {
-    ['resumecraft_profile_v1', 'resumecraft_profile_v2_rudresh'].forEach((oldKey) => {
-      try { localStorage.removeItem(oldKey); } catch (_) {}
-    });
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : defaultValue;
   } catch (e) {
@@ -55,35 +58,47 @@ function safeSetItem<T>(key: string, value: T): void {
 }
 
 export const repository = {
-  // User Profile
-  getProfile(): Profile {
-    const p = safeGetItem<Profile>(STORAGE_KEYS.PROFILE, DEFAULT_PROFILE);
-    const hasRudreshVerifiedData =
-      p &&
-      p.personalInfo &&
-      p.personalInfo.fullName === 'RUDRESH M' &&
-      Array.isArray(p.experiences) &&
-      p.experiences.some((e) => e.company === 'CAE') &&
-      Array.isArray(p.projects) &&
-      p.projects.some((pr) => pr.title && pr.title.includes('Career Mock'));
-
-    if (!hasRudreshVerifiedData) {
-      safeSetItem(STORAGE_KEYS.PROFILE, DEFAULT_PROFILE);
-      return DEFAULT_PROFILE;
+  /**
+   * Clears all cached user data in localStorage upon logout.
+   */
+  clearUserCache(userId?: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      if (userId) {
+        const suffix = userId.replace(/[^a-zA-Z0-9_-]/g, '_');
+        Object.keys(localStorage).forEach((key) => {
+          if (key.includes(suffix)) {
+            localStorage.removeItem(key);
+          }
+        });
+      } else {
+        Object.values(STORAGE_KEYS).forEach((k) => {
+          localStorage.removeItem(k);
+        });
+      }
+    } catch (e) {
+      console.error('Error clearing user cache:', e);
     }
-    return p;
   },
 
-  cacheProfile(profile: Profile): void {
-    safeSetItem(STORAGE_KEYS.PROFILE, profile);
+  // User Profile (multi-user scoped)
+  getProfile(userId?: string): Profile {
+    const key = getUserStorageKey(STORAGE_KEYS.PROFILE, userId);
+    return safeGetItem<Profile>(key, DEFAULT_PROFILE);
   },
 
-  saveProfile(profile: Profile): Profile {
+  cacheProfile(profile: Profile, userId?: string): void {
+    const key = getUserStorageKey(STORAGE_KEYS.PROFILE, userId);
+    safeSetItem(key, profile);
+  },
+
+  saveProfile(profile: Profile, userId?: string): Profile {
+    const key = getUserStorageKey(STORAGE_KEYS.PROFILE, userId);
     const updated = {
       ...profile,
       updatedAt: new Date().toISOString(),
     };
-    safeSetItem(STORAGE_KEYS.PROFILE, updated);
+    safeSetItem(key, updated);
     return updated;
   },
 
@@ -109,8 +124,9 @@ export const repository = {
     }
   },
 
-  resetProfile(): Profile {
-    safeSetItem(STORAGE_KEYS.PROFILE, DEFAULT_PROFILE);
+  resetProfile(userId?: string): Profile {
+    const key = getUserStorageKey(STORAGE_KEYS.PROFILE, userId);
+    safeSetItem(key, DEFAULT_PROFILE);
     return DEFAULT_PROFILE;
   },
 

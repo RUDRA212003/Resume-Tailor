@@ -11,6 +11,7 @@
     "test": "npx tsx --test tests/factualAccuracy.test.mjs tests/documentProcessing.test.mjs && node --test tests/pdfGeneration.test.mjs"
   },
   "dependencies": {
+    "@auth0/nextjs-auth0": "^4.33.0",
     "@google/genai": "^3.6.1",
     "@google/generative-ai": "^0.21.0",
     "@react-pdf/renderer": "^4.9.0",

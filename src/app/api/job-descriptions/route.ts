@@ -1,29 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mongoRepository } from '@/lib/db/mongoRepository';
 import { isMongoConfigured } from '@/lib/db/mongodb';
+import { requireAuth } from '@/lib/auth/authServer';
 import { JobDescription } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    if (isMongoConfigured()) {
-      const jds = await mongoRepository.getJobDescriptions();
-      return NextResponse.json({
-        jobDescriptions: jds,
-        _storage: 'mongodb',
-        count: jds.length,
-      });
+    const auth = await requireAuth(req);
+    if (auth instanceof NextResponse) {
+      return auth;
     }
+
+    const jds = await mongoRepository.getJobDescriptions(auth.auth0Id);
     return NextResponse.json({
-      jobDescriptions: [],
-      _storage: 'local',
-      count: 0,
+      jobDescriptions: jds,
+      _storage: isMongoConfigured() ? 'mongodb' : 'memory',
+      count: jds.length,
     });
   } catch (error: any) {
-    console.error('Error fetching job descriptions from MongoDB:', error);
+    console.error('Error fetching job descriptions:', error);
     return NextResponse.json(
-      { jobDescriptions: [], error: error.message || 'Database error', _storage: 'local' },
+      { jobDescriptions: [], error: error.message || 'Database error' },
       { status: 500 }
     );
   }
@@ -31,37 +30,24 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAuth(req);
+    if (auth instanceof NextResponse) {
+      return auth;
+    }
+
     const body = (await req.json()) as JobDescription;
     if (!body || !body.id) {
       return NextResponse.json({ error: 'Invalid job description data.' }, { status: 400 });
     }
 
-    if (isMongoConfigured()) {
-      try {
-        const saved = await mongoRepository.saveJobDescription(body);
-        return NextResponse.json({
-          ...saved,
-          _storage: 'mongodb',
-          savedToDb: true,
-        });
-      } catch (dbErr: any) {
-        console.error('MongoDB save job description failed:', dbErr);
-        return NextResponse.json(
-          {
-            ...body,
-            _storage: 'local',
-            savedToDb: false,
-            error: dbErr.message || 'MongoDB write failed.',
-          },
-          { status: 200 }
-        );
-      }
-    }
+    // Enforce verified user ownership
+    const saved = await mongoRepository.saveJobDescription(auth.auth0Id, body);
 
     return NextResponse.json({
-      ...body,
-      _storage: 'local',
-      savedToDb: false,
+      ...saved,
+      userId: auth.auth0Id,
+      _storage: isMongoConfigured() ? 'mongodb' : 'memory',
+      savedToDb: isMongoConfigured(),
     });
   } catch (error: any) {
     console.error('Error saving job description:', error);

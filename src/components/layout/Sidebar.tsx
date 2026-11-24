@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useUser } from '@auth0/nextjs-auth0/client';
 import {
   LayoutDashboard,
   UserCheck,
@@ -12,7 +13,11 @@ import {
   History,
   Settings,
   ShieldCheck,
+  LogIn,
+  LogOut,
+  User as UserIcon,
 } from 'lucide-react';
+import { repository } from '@/lib/storage/repository';
 
 interface NavItem {
   name: string;
@@ -60,6 +65,15 @@ const navItems: NavItem[] = [
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
+  const { user, isLoading } = useUser();
+
+  const handleLogout = () => {
+    if (user?.sub) {
+      repository.clearUserCache(user.sub);
+    } else {
+      repository.clearUserCache();
+    }
+  };
 
   return (
     <aside className="hidden md:flex w-64 bg-white border-r border-[#E5E5E7] flex-col h-screen sticky top-0 shrink-0 select-none">
@@ -109,14 +123,59 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* Ground Truth Guarantee Footer Badge */}
-      <div className="p-4 m-3 bg-[#F5F5F7] rounded-xl border border-[#E5E5E7]/70 text-xs text-[#1D1D1F]">
+      <div className="p-3 mx-3 mb-2 bg-[#F5F5F7] rounded-xl border border-[#E5E5E7]/70 text-xs text-[#1D1D1F]">
         <div className="flex items-center gap-1.5 font-semibold text-[#0066CC] mb-1">
           <ShieldCheck className="w-4 h-4 text-[#0066CC]" />
           <span>Factual Truth Guarantee</span>
         </div>
         <p className="text-[11px] leading-relaxed text-[#555555]">
-          Zero hallucinations. Resumes strictly grounded in your verified profile facts.
+          Zero hallucinations. Resumes strictly grounded in verified profile facts.
         </p>
+      </div>
+
+      {/* User Account / Auth0 Bar */}
+      <div className="p-3 border-t border-[#E5E5E7] bg-white">
+        {user ? (
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              {user.picture ? (
+                <img
+                  src={user.picture}
+                  alt={user.name || 'User'}
+                  className="w-8 h-8 rounded-full border border-[#E5E5E7] object-cover shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-[#0066CC]/10 text-[#0066CC] font-bold text-xs flex items-center justify-center shrink-0">
+                  {user.name ? user.name.slice(0, 2).toUpperCase() : <UserIcon className="w-4 h-4" />}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-[#1D1D1F] truncate">
+                  {user.name || 'Logged In'}
+                </div>
+                <div className="text-[10px] text-[#666666] truncate">
+                  {user.email || user.sub}
+                </div>
+              </div>
+            </div>
+            <a
+              href="/auth/logout"
+              onClick={handleLogout}
+              title="Log out"
+              className="p-1.5 rounded-lg text-[#666666] hover:text-rose-600 hover:bg-rose-50 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </a>
+          </div>
+        ) : (
+          <a
+            href="/auth/login"
+            className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-lg bg-[#0066CC] text-white text-xs font-semibold hover:bg-[#0052A3] transition-colors shadow-xs"
+          >
+            <LogIn className="w-3.5 h-3.5" />
+            <span>Sign In / Sign Up</span>
+          </a>
+        )}
       </div>
     </aside>
   );

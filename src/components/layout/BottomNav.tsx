@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useUser } from '@auth0/nextjs-auth0/client';
 import {
   LayoutDashboard,
   UserCheck,
@@ -17,7 +18,11 @@ import {
   Database,
   CheckCircle2,
   ChevronRight,
+  LogIn,
+  LogOut,
+  User as UserIcon,
 } from 'lucide-react';
+import { repository } from '@/lib/storage/repository';
 
 interface BottomNavProps {
   profileName?: string;
@@ -32,6 +37,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 }) => {
   const pathname = usePathname();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const { user } = useUser();
+
+  const handleLogout = () => {
+    if (user?.sub) {
+      repository.clearUserCache(user.sub);
+    } else {
+      repository.clearUserCache();
+    }
+  };
 
   const mainTabs = [
     {
@@ -116,12 +130,40 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             {/* Candidate & Verification Info */}
             <div className="my-4 p-3.5 bg-[#F0F7FF] rounded-xl border border-[#0066CC]/20 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-[#1D1D1F]">Verified Profile</span>
+                <span className="text-xs font-semibold text-[#1D1D1F]">
+                  {user ? 'Authenticated Account' : 'Verified Profile'}
+                </span>
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-300">
                   <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                  {profileName}
+                  {user?.name || profileName}
                 </span>
               </div>
+
+              {user ? (
+                <div className="flex items-center justify-between pt-1 border-t border-[#0066CC]/10">
+                  <div className="text-[11px] text-[#555555] truncate max-w-[200px]">
+                    {user.email || user.sub}
+                  </div>
+                  <a
+                    href="/auth/logout"
+                    onClick={handleLogout}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700"
+                  >
+                    <LogOut className="w-3 h-3" />
+                    Sign Out
+                  </a>
+                </div>
+              ) : (
+                <div className="pt-1 border-t border-[#0066CC]/10">
+                  <a
+                    href="/auth/login"
+                    className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg bg-[#0066CC] text-white text-xs font-semibold"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    Sign In / Register
+                  </a>
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
                 {dbConnected !== null && (

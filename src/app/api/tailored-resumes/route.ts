@@ -1,29 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mongoRepository } from '@/lib/db/mongoRepository';
 import { isMongoConfigured } from '@/lib/db/mongodb';
+import { requireAuth } from '@/lib/auth/authServer';
 import { TailoredResume } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    if (isMongoConfigured()) {
-      const resumes = await mongoRepository.getTailoredResumes();
-      return NextResponse.json({
-        resumes,
-        _storage: 'mongodb',
-        count: resumes.length,
-      });
+    const auth = await requireAuth(req);
+    if (auth instanceof NextResponse) {
+      return auth;
     }
+
+    const resumes = await mongoRepository.getTailoredResumes(auth.auth0Id);
     return NextResponse.json({
-      resumes: [],
-      _storage: 'local',
-      count: 0,
+      resumes,
+      _storage: isMongoConfigured() ? 'mongodb' : 'memory',
+      count: resumes.length,
     });
   } catch (error: any) {
-    console.error('Error fetching tailored resumes from MongoDB:', error);
+    console.error('Error fetching tailored resumes:', error);
     return NextResponse.json(
-      { resumes: [], error: error.message || 'Database error', _storage: 'local' },
+      { resumes: [], error: error.message || 'Database error' },
       { status: 500 }
     );
   }
@@ -31,37 +30,32 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAuth(req);
+    if (auth instanceof NextResponse) {
+      return auth;
+    }
+
     const body = (await req.json()) as TailoredResume;
     if (!body || !body.id) {
       return NextResponse.json({ error: 'Invalid tailored resume data.' }, { status: 400 });
     }
 
-    if (isMongoConfigured()) {
-      try {
-        const saved = await mongoRepository.saveTailoredResume(body);
-        return NextResponse.json({
-          ...saved,
-          _storage: 'mongodb',
-          savedToDb: true,
-        });
-      } catch (dbErr: any) {
-        console.error('MongoDB save tailored resume failed:', dbErr);
-        return NextResponse.json(
-          {
-            ...body,
-            _storage: 'local',
-            savedToDb: false,
-            error: dbErr.message || 'MongoDB write failed.',
-          },
-          { status: 200 }
-        );
-      }
-    }
+    // Enforce verified user ownership
+    const saved = await mongoRepository.saveTailoredResume(auth.auth0Id, body);
+
+    // Record activity in user's history
+    await mongoRepository.recordHistory(
+      auth.auth0Id,
+      'tailored_resume_created',
+      saved.id,
+      { title: saved.title, templateId: saved.templateId }
+    );
 
     return NextResponse.json({
-      ...body,
-      _storage: 'local',
-      savedToDb: false,
+      ...saved,
+      userId: auth.auth0Id,
+      _storage: isMongoConfigured() ? 'mongodb' : 'memory',
+      savedToDb: isMongoConfigured(),
     });
   } catch (error: any) {
     console.error('Error saving tailored resume:', error);

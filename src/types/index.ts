@@ -150,6 +150,7 @@ export interface ResumeTemplate {
 
 export interface JobDescription {
   id: string;
+  userId?: string;
   companyName: string;
   jobTitle: string;
   location?: string;
@@ -255,6 +256,8 @@ export interface ResumeDiff {
 
 export interface TailoredResume {
   id: string;
+  userId?: string;
+  originalResumeId?: string;
   jobDescriptionId: string;
   templateId: string;
   profileSnapshotId: string;
@@ -280,6 +283,7 @@ export interface TailoredResume {
 
 export interface SavedApplication {
   id: string;
+  userId?: string;
   companyName: string;
   jobTitle: string;
   location?: string;
@@ -302,4 +306,25 @@ export interface UserSettings {
   privacyConsentGiven: boolean;
   storageProvider: 'mongodb' | 'supabase' | 'local';
   anonymizePIIInPrompt: boolean;
+}
+
+export type UserRole = 'user' | 'admin';
+
+export interface UserRecord {
+  auth0Id: string;
+  name: string;
+  email: string;
+  profileImage?: string;
+  role: UserRole;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApplicationHistoryItem {
+  id: string;
+  userId: string;
+  action: string;
+  relatedDocumentId?: string;
+  details?: Record<string, any>;
+  createdAt: string;
 }
