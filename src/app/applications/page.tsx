@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useUser } from '@auth0/nextjs-auth0/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 
 export default function ApplicationsPage() {
+  const { user } = useUser();
   const [mounted, setMounted] = useState(false);
   const [applications, setApplications] = useState<SavedApplication[]>([]);
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
@@ -29,20 +31,27 @@ export default function ApplicationsPage() {
 
   useEffect(() => {
     setMounted(true);
-    setApplications(repository.getApplications());
-    setProfile(repository.getProfile());
     setTemplates(repository.getTemplates());
 
+    if (!user?.sub) {
+      setApplications([]);
+      setProfile(DEFAULT_PROFILE);
+      return;
+    }
+
+    setApplications(repository.getApplications(user.sub));
+    setProfile(repository.getProfile(user.sub));
+
     // Sync seamlessly with MongoDB Atlas
-    repository.syncApplicationsFromDb().then((synced) => {
+    repository.syncApplicationsFromDb(user.sub).then((synced) => {
       if (synced && synced.length > 0) setApplications(synced);
     });
-  }, []);
+  }, [user?.sub]);
 
   const handleDelete = (id: string) => {
     if (confirm('Delete this saved application?')) {
-      repository.deleteApplication(id);
-      setApplications(repository.getApplications());
+      repository.deleteApplication(id, user?.sub);
+      setApplications(repository.getApplications(user?.sub));
     }
   };
 
@@ -50,8 +59,8 @@ export default function ApplicationsPage() {
     const app = applications.find((a) => a.id === id);
     if (!app) return;
     const updated = { ...app, status, updatedAt: new Date().toISOString() };
-    repository.saveApplication(updated);
-    setApplications(repository.getApplications());
+    repository.saveApplication(updated, user?.sub);
+    setApplications(repository.getApplications(user?.sub));
   };
 
   const downloadDocx = async (app: SavedApplication) => {

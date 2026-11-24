@@ -16,19 +16,25 @@ import {
   Briefcase,
   Layers,
   ArrowRight,
-  CheckCircle2,
   Download,
   Clock,
   Building,
   ShieldCheck,
   AlertCircle,
+  LogIn,
 } from 'lucide-react';
 import { TailoredResume, JobDescription, SavedApplication, ResumeTemplate } from '@/types';
 
 export default function DashboardPage() {
-  const { user } = useUser();
+  const { user, isLoading } = useUser();
   const { requireAuth } = useAuthModal();
   const [mounted, setMounted] = useState(false);
+
+  const [tailoredResumes, setTailoredResumes] = useState<TailoredResume[]>([]);
+  const [jobDescriptions, setJobDescriptions] = useState<JobDescription[]>([]);
+  const [applications, setApplications] = useState<SavedApplication[]>([]);
+  const [templates, setTemplates] = useState<ResumeTemplate[]>(BUILT_IN_TEMPLATES);
+  const [profile, setProfile] = useState(DEFAULT_PROFILE);
 
   const handleProtectedClick = (e: React.MouseEvent, href: string, featureName: string) => {
     if (!user) {
@@ -36,28 +42,36 @@ export default function DashboardPage() {
       requireAuth(href, featureName);
     }
   };
-  const [tailoredResumes, setTailoredResumes] = useState<TailoredResume[]>([]);
-  const [jobDescriptions, setJobDescriptions] = useState<JobDescription[]>([]);
-  const [applications, setApplications] = useState<SavedApplication[]>([]);
-  const [templates, setTemplates] = useState<ResumeTemplate[]>(BUILT_IN_TEMPLATES);
-  const [profile, setProfile] = useState(DEFAULT_PROFILE);
 
   useEffect(() => {
     setMounted(true);
-    setTailoredResumes(repository.getTailoredResumes());
-    setJobDescriptions(repository.getJobDescriptions());
-    setApplications(repository.getApplications());
     setTemplates(repository.getTemplates());
-    setProfile(repository.getProfile());
 
-    // Seamlessly sync with MongoDB Atlas
-    repository.syncTailoredResumesFromDb().then((synced) => {
+    if (!user?.sub) {
+      // Unauthenticated: clear all user data and prevent reading other users' cache
+      repository.setActiveUserId(null);
+      setTailoredResumes([]);
+      setJobDescriptions([]);
+      setApplications([]);
+      setProfile(DEFAULT_PROFILE);
+      return;
+    }
+
+    // Authenticated: scope active user session
+    repository.setActiveUserId(user.sub);
+    setTailoredResumes(repository.getTailoredResumes(user.sub));
+    setJobDescriptions(repository.getJobDescriptions(user.sub));
+    setApplications(repository.getApplications(user.sub));
+    setProfile(repository.getProfile(user.sub));
+
+    // Seamlessly sync with MongoDB Atlas for verified user account
+    repository.syncTailoredResumesFromDb(user.sub).then((synced) => {
       if (synced && synced.length > 0) setTailoredResumes(synced);
     });
-    repository.syncApplicationsFromDb().then((synced) => {
+    repository.syncApplicationsFromDb(user.sub).then((synced) => {
       if (synced && synced.length > 0) setApplications(synced);
     });
-    repository.syncJobDescriptionsFromDb().then((synced) => {
+    repository.syncJobDescriptionsFromDb(user.sub).then((synced) => {
       if (synced && synced.length > 0) setJobDescriptions(synced);
     });
 
@@ -66,15 +80,15 @@ export default function DashboardPage() {
       .then((data) => {
         if (data && data.personalInfo) {
           setProfile(data);
-          repository.cacheProfile(data);
+          repository.cacheProfile(data, user.sub);
         }
       })
       .catch(() => {});
-  }, []);
+  }, [user?.sub]);
 
-  const totalVerifiedSkills = profile.skills.filter((s) => s.isVerified).length;
-  const totalVerifiedExperiences = profile.experiences.filter((e) => e.isVerified).length;
-  const totalVerifiedProjects = profile.projects.filter((p) => p.isVerified).length;
+  const totalVerifiedSkills = user ? profile.skills.filter((s) => s.isVerified).length : 0;
+  const totalVerifiedExperiences = user ? profile.experiences.filter((e) => e.isVerified).length : 0;
+  const totalVerifiedProjects = user ? profile.projects.filter((p) => p.isVerified).length : 0;
 
   const downloadDocx = async (resume: TailoredResume) => {
     try {
@@ -122,6 +136,10 @@ export default function DashboardPage() {
     }
   };
 
+  const displayName = user
+    ? profile.personalInfo.fullName || user.name || 'there'
+    : null;
+
   return (
     <AppLayout>
       <div className="max-w-6xl mx-auto space-y-8">
@@ -133,30 +151,42 @@ export default function DashboardPage() {
               <span>ResumeCraft Studio</span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-[#1D1D1F]">
-              Welcome back, {profile.personalInfo.fullName}
+              {user ? `Welcome back, ${displayName}` : 'Welcome to ResumeCraft Studio'}
             </h1>
             <p className="text-sm text-[#555555] max-w-xl">
-              Tailor ATS-optimized resumes aligned with any job description in seconds. Factual accuracy strictly guaranteed from your verified profile repository.
+              {user
+                ? 'Tailor ATS-optimized resumes aligned with any job description in seconds. Factual accuracy strictly guaranteed from your verified profile repository.'
+                : 'Create ATS-optimized resumes tailored precisely to any job description. Sign in to access your private workspace, track applications, and export high-scoring resumes.'}
             </p>
           </div>
 
           <div className="shrink-0 flex items-center gap-3">
-            <Link
-              href="/profile"
-              onClick={(e) => handleProtectedClick(e, '/profile', 'Profile Management')}
-            >
-              <Button variant="secondary" size="md">
-                Edit Profile
-              </Button>
-            </Link>
-            <Link
-              href="/tailor"
-              onClick={(e) => handleProtectedClick(e, '/tailor', 'Resume Tailoring Studio')}
-            >
-              <Button size="md" pill icon={<Sparkles className="w-4 h-4" />}>
-                Create Tailored Resume
-              </Button>
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  href="/profile"
+                  onClick={(e) => handleProtectedClick(e, '/profile', 'Profile Management')}
+                >
+                  <Button variant="secondary" size="md">
+                    Edit Profile
+                  </Button>
+                </Link>
+                <Link
+                  href="/tailor"
+                  onClick={(e) => handleProtectedClick(e, '/tailor', 'Resume Tailoring Studio')}
+                >
+                  <Button size="md" pill icon={<Sparkles className="w-4 h-4" />}>
+                    Create Tailored Resume
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <a href="/auth/login?returnTo=/dashboard">
+                <Button size="md" pill icon={<LogIn className="w-4 h-4" />}>
+                  Sign In / Get Started
+                </Button>
+              </a>
+            )}
           </div>
         </div>
 
@@ -170,10 +200,14 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-2xl font-bold text-[#1D1D1F] mt-2">
-              {tailoredResumes.length}
+              {user ? tailoredResumes.length : 0}
             </p>
             <p className="text-xs text-[#555555] mt-1">
-              {tailoredResumes.length > 0 ? 'Custom versions ready' : 'No resumes yet'}
+              {user
+                ? tailoredResumes.length > 0
+                  ? 'Custom versions ready'
+                  : 'No resumes yet'
+                : 'Sign in to view'}
             </p>
           </Card>
 
@@ -185,9 +219,11 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-2xl font-bold text-[#1D1D1F] mt-2">
-              {jobDescriptions.length}
+              {user ? jobDescriptions.length : 0}
             </p>
-            <p className="text-xs text-[#555555] mt-1">Analyzed requirements</p>
+            <p className="text-xs text-[#555555] mt-1">
+              {user ? 'Analyzed requirements' : 'Sign in to view'}
+            </p>
           </Card>
 
           <Card>
@@ -198,9 +234,11 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-2xl font-bold text-[#1D1D1F] mt-2">
-              {applications.length}
+              {user ? applications.length : 0}
             </p>
-            <p className="text-xs text-[#555555] mt-1">Tracked job submissions</p>
+            <p className="text-xs text-[#555555] mt-1">
+              {user ? 'Tracked job submissions' : 'Sign in to view'}
+            </p>
           </Card>
 
           <Card>
@@ -224,22 +262,32 @@ export default function DashboardPage() {
                 <h2 className="text-sm font-semibold text-[#1D1D1F]">
                   Profile Ground Truth Repository Status
                 </h2>
-                <Badge variant="available" size="sm">
-                  Active
+                <Badge variant={user ? 'available' : 'neutral'} size="sm">
+                  {user ? 'Active' : 'Guest'}
                 </Badge>
               </div>
               <p className="text-xs text-[#555555]">
-                Single source of truth: {totalVerifiedSkills} skills, {totalVerifiedExperiences} experiences, and {totalVerifiedProjects} projects verified. The AI will never invent facts outside these.
+                {user
+                  ? `Single source of truth: ${totalVerifiedSkills} skills, ${totalVerifiedExperiences} experiences, and ${totalVerifiedProjects} projects verified. The AI will never invent facts outside these.`
+                  : 'Single source of truth: Resumes are strictly tailored from your verified personal experience. Sign in to link your profile facts.'}
               </p>
             </div>
-            <Link
-              href="/profile"
-              onClick={(e) => handleProtectedClick(e, '/profile', 'Repository Facts')}
-            >
-              <Button variant="secondary" size="sm">
-                Manage Repository Facts
-              </Button>
-            </Link>
+            {user ? (
+              <Link
+                href="/profile"
+                onClick={(e) => handleProtectedClick(e, '/profile', 'Repository Facts')}
+              >
+                <Button variant="secondary" size="sm">
+                  Manage Repository Facts
+                </Button>
+              </Link>
+            ) : (
+              <a href="/auth/login?returnTo=/dashboard">
+                <Button variant="secondary" size="sm">
+                  Sign In to Connect
+                </Button>
+              </a>
+            )}
           </div>
         </Card>
 
@@ -256,6 +304,7 @@ export default function DashboardPage() {
               </div>
               <Link
                 href="/tailor"
+                onClick={(e) => handleProtectedClick(e, '/tailor', 'New Tailor')}
                 className="text-xs font-semibold text-[#0066CC] hover:underline flex items-center gap-1"
               >
                 <span>New Tailor</span>
@@ -264,7 +313,26 @@ export default function DashboardPage() {
             </div>
 
             <div className="divide-y divide-[#E5E5E7] mt-2">
-              {tailoredResumes.length === 0 ? (
+              {!user ? (
+                <div className="py-10 text-center text-xs text-[#555555] space-y-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 text-[#0066CC] flex items-center justify-center mx-auto">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-semibold text-sm text-[#1D1D1F]">
+                      Sign in to view your tailored resumes
+                    </p>
+                    <p className="text-xs text-[#666666] max-w-sm mx-auto">
+                      Your tailored resumes are private and securely stored in your personal account.
+                    </p>
+                  </div>
+                  <a href="/auth/login?returnTo=/dashboard">
+                    <Button size="sm" pill icon={<Sparkles className="w-3.5 h-3.5" />}>
+                      Sign In / Register
+                    </Button>
+                  </a>
+                </div>
+              ) : tailoredResumes.length === 0 ? (
                 <div className="py-8 text-center text-xs text-[#555555] space-y-3">
                   <AlertCircle className="w-8 h-8 text-[#888888] mx-auto opacity-50" />
                   <p>No tailored resumes created yet.</p>
@@ -337,6 +405,7 @@ export default function DashboardPage() {
               </div>
               <Link
                 href="/tailor"
+                onClick={(e) => handleProtectedClick(e, '/tailor', 'Upload JD')}
                 className="text-xs font-semibold text-[#0066CC] hover:underline flex items-center gap-1"
               >
                 <span>Upload JD</span>
@@ -345,7 +414,26 @@ export default function DashboardPage() {
             </div>
 
             <div className="divide-y divide-[#E5E5E7] mt-2">
-              {jobDescriptions.length === 0 ? (
+              {!user ? (
+                <div className="py-10 text-center text-xs text-[#555555] space-y-3">
+                  <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mx-auto">
+                    <Building className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-semibold text-sm text-[#1D1D1F]">
+                      Sign in to view job descriptions
+                    </p>
+                    <p className="text-xs text-[#666666] max-w-sm mx-auto">
+                      Job postings and match criteria are saved privately to your personal account.
+                    </p>
+                  </div>
+                  <a href="/auth/login?returnTo=/dashboard">
+                    <Button variant="secondary" size="sm">
+                      Sign In / Register
+                    </Button>
+                  </a>
+                </div>
+              ) : jobDescriptions.length === 0 ? (
                 <div className="py-8 text-center text-xs text-[#555555] space-y-3">
                   <FileText className="w-8 h-8 text-[#888888] mx-auto opacity-50" />
                   <p>No job descriptions analyzed yet.</p>

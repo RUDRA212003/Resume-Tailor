@@ -23,16 +23,39 @@ const STORAGE_KEYS = {
   SETTINGS: 'resumecraft_settings_v1',
 };
 
-function getUserStorageKey(baseKey: string, userId?: string): string {
-  if (!userId) return baseKey;
-  const cleanId = userId.replace(/[^a-zA-Z0-9_-]/g, '_');
+// Global active user tracking in client session
+let currentActiveUserId: string | null = null;
+
+// Purge legacy shared keys on client load to ensure zero data leakage across user sessions
+if (typeof window !== 'undefined') {
+  try {
+    [
+      'resumecraft_tailored_resumes_v1',
+      'resumecraft_jds_v1',
+      'resumecraft_applications_v1',
+      'resumecraft_analyses_v1',
+    ].forEach((k) => {
+      localStorage.removeItem(k);
+    });
+  } catch (_) {}
+}
+
+function resolveUserId(userId?: string): string | null {
+  return userId || currentActiveUserId || null;
+}
+
+function getUserStorageKey(baseKey: string, userId?: string | null): string | null {
+  const uid = resolveUserId(userId || undefined);
+  if (!uid) return null;
+  const cleanId = uid.replace(/[^a-zA-Z0-9_-]/g, '_');
   return `${baseKey}_${cleanId}`;
 }
 
 // In-memory fallback cache for SSR or node environments
 const memoryStore: Record<string, unknown> = {};
 
-function safeGetItem<T>(key: string, defaultValue: T): T {
+function safeGetItem<T>(key: string | null, defaultValue: T): T {
+  if (!key) return defaultValue;
   if (typeof window === 'undefined') {
     return (memoryStore[key] as T) ?? defaultValue;
   }
@@ -45,7 +68,8 @@ function safeGetItem<T>(key: string, defaultValue: T): T {
   }
 }
 
-function safeSetItem<T>(key: string, value: T): void {
+function safeSetItem<T>(key: string | null, value: T): void {
+  if (!key) return;
   if (typeof window === 'undefined') {
     memoryStore[key] = value;
     return;
@@ -59,13 +83,25 @@ function safeSetItem<T>(key: string, value: T): void {
 
 export const repository = {
   /**
+   * Sets or clears the active authenticated Auth0 user ID for client-side storage scoping.
+   */
+  setActiveUserId(userId: string | null): void {
+    currentActiveUserId = userId;
+  },
+
+  getActiveUserId(): string | null {
+    return currentActiveUserId;
+  },
+
+  /**
    * Clears all cached user data in localStorage upon logout.
    */
   clearUserCache(userId?: string): void {
+    const targetId = resolveUserId(userId);
     if (typeof window === 'undefined') return;
     try {
-      if (userId) {
-        const suffix = userId.replace(/[^a-zA-Z0-9_-]/g, '_');
+      if (targetId) {
+        const suffix = targetId.replace(/[^a-zA-Z0-9_-]/g, '_');
         Object.keys(localStorage).forEach((key) => {
           if (key.includes(suffix)) {
             localStorage.removeItem(key);
@@ -76,6 +112,7 @@ export const repository = {
           localStorage.removeItem(k);
         });
       }
+      currentActiveUserId = null;
     } catch (e) {
       console.error('Error clearing user cache:', e);
     }
@@ -130,7 +167,7 @@ export const repository = {
     return DEFAULT_PROFILE;
   },
 
-  // Templates
+  // Templates (Built-in + ATS styles)
   getTemplates(): ResumeTemplate[] {
     const tmpls = safeGetItem<ResumeTemplate[]>(
       STORAGE_KEYS.TEMPLATES,
@@ -184,17 +221,21 @@ export const repository = {
     return true;
   },
 
-  // Job Descriptions
-  getJobDescriptions(): JobDescription[] {
-    return safeGetItem<JobDescription[]>(STORAGE_KEYS.JOB_DESCRIPTIONS, []);
+  // Job Descriptions (Strictly User-Scoped)
+  getJobDescriptions(userId?: string): JobDescription[] {
+    const key = getUserStorageKey(STORAGE_KEYS.JOB_DESCRIPTIONS, userId);
+    if (!key) return [];
+    return safeGetItem<JobDescription[]>(key, []);
   },
 
-  getJobDescriptionById(id: string): JobDescription | undefined {
-    return this.getJobDescriptions().find((jd) => jd.id === id);
+  getJobDescriptionById(id: string, userId?: string): JobDescription | undefined {
+    return this.getJobDescriptions(userId).find((jd) => jd.id === id);
   },
 
-  saveJobDescription(jd: JobDescription): JobDescription {
-    const list = this.getJobDescriptions();
+  saveJobDescription(jd: JobDescription, userId?: string): JobDescription {
+    const key = getUserStorageKey(STORAGE_KEYS.JOB_DESCRIPTIONS, userId);
+    if (!key) return jd;
+    const list = this.getJobDescriptions(userId);
     const index = list.findIndex((item) => item.id === jd.id);
     let updated: JobDescription[];
     if (index >= 0) {
@@ -203,7 +244,7 @@ export const repository = {
     } else {
       updated = [jd, ...list];
     }
-    safeSetItem(STORAGE_KEYS.JOB_DESCRIPTIONS, updated);
+    safeSetItem(key, updated);
 
     // Sync to MongoDB Atlas asynchronously
     if (typeof window !== 'undefined') {
@@ -217,38 +258,43 @@ export const repository = {
     return jd;
   },
 
-  async syncJobDescriptionsFromDb(): Promise<JobDescription[]> {
-    if (typeof window === 'undefined') return this.getJobDescriptions();
+  async syncJobDescriptionsFromDb(userId?: string): Promise<JobDescription[]> {
+    const key = getUserStorageKey(STORAGE_KEYS.JOB_DESCRIPTIONS, userId);
+    if (!key || typeof window === 'undefined') return [];
     try {
       const res = await fetch('/api/job-descriptions');
-      if (!res.ok) return this.getJobDescriptions();
+      if (!res.ok) return this.getJobDescriptions(userId);
       const data = await res.json();
       if (Array.isArray(data.jobDescriptions)) {
-        const local = this.getJobDescriptions();
+        const local = this.getJobDescriptions(userId);
         const map = new Map<string, JobDescription>();
         local.forEach((j) => map.set(j.id, j));
         data.jobDescriptions.forEach((j: JobDescription) => map.set(j.id, j));
         const merged = Array.from(map.values()).sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-        safeSetItem(STORAGE_KEYS.JOB_DESCRIPTIONS, merged);
+        safeSetItem(key, merged);
         return merged;
       }
     } catch (_) {}
-    return this.getJobDescriptions();
+    return this.getJobDescriptions(userId);
   },
 
-  // Tailored Resumes
-  getTailoredResumes(): TailoredResume[] {
-    return safeGetItem<TailoredResume[]>(STORAGE_KEYS.TAILORED_RESUMES, []);
+  // Tailored Resumes (Strictly User-Scoped)
+  getTailoredResumes(userId?: string): TailoredResume[] {
+    const key = getUserStorageKey(STORAGE_KEYS.TAILORED_RESUMES, userId);
+    if (!key) return [];
+    return safeGetItem<TailoredResume[]>(key, []);
   },
 
-  getTailoredResumeById(id: string): TailoredResume | undefined {
-    return this.getTailoredResumes().find((r) => r.id === id);
+  getTailoredResumeById(id: string, userId?: string): TailoredResume | undefined {
+    return this.getTailoredResumes(userId).find((r) => r.id === id);
   },
 
-  saveTailoredResume(resume: TailoredResume): TailoredResume {
-    const list = this.getTailoredResumes();
+  saveTailoredResume(resume: TailoredResume, userId?: string): TailoredResume {
+    const key = getUserStorageKey(STORAGE_KEYS.TAILORED_RESUMES, userId);
+    if (!key) return resume;
+    const list = this.getTailoredResumes(userId);
     const index = list.findIndex((r) => r.id === resume.id);
     let updated: TailoredResume[];
     if (index >= 0) {
@@ -257,7 +303,7 @@ export const repository = {
     } else {
       updated = [resume, ...list];
     }
-    safeSetItem(STORAGE_KEYS.TAILORED_RESUMES, updated);
+    safeSetItem(key, updated);
 
     // Sync to MongoDB Atlas asynchronously
     if (typeof window !== 'undefined') {
@@ -271,10 +317,12 @@ export const repository = {
     return resume;
   },
 
-  deleteTailoredResume(id: string): boolean {
-    const list = this.getTailoredResumes();
+  deleteTailoredResume(id: string, userId?: string): boolean {
+    const key = getUserStorageKey(STORAGE_KEYS.TAILORED_RESUMES, userId);
+    if (!key) return false;
+    const list = this.getTailoredResumes(userId);
     const filtered = list.filter((r) => r.id !== id);
-    safeSetItem(STORAGE_KEYS.TAILORED_RESUMES, filtered);
+    safeSetItem(key, filtered);
 
     if (typeof window !== 'undefined') {
       fetch(`/api/tailored-resumes/${id}`, { method: 'DELETE' }).catch((e) =>
@@ -285,34 +333,39 @@ export const repository = {
     return true;
   },
 
-  async syncTailoredResumesFromDb(): Promise<TailoredResume[]> {
-    if (typeof window === 'undefined') return this.getTailoredResumes();
+  async syncTailoredResumesFromDb(userId?: string): Promise<TailoredResume[]> {
+    const key = getUserStorageKey(STORAGE_KEYS.TAILORED_RESUMES, userId);
+    if (!key || typeof window === 'undefined') return [];
     try {
       const res = await fetch('/api/tailored-resumes');
-      if (!res.ok) return this.getTailoredResumes();
+      if (!res.ok) return this.getTailoredResumes(userId);
       const data = await res.json();
       if (Array.isArray(data.resumes)) {
-        const local = this.getTailoredResumes();
+        const local = this.getTailoredResumes(userId);
         const map = new Map<string, TailoredResume>();
         local.forEach((r) => map.set(r.id, r));
         data.resumes.forEach((r: TailoredResume) => map.set(r.id, r));
         const merged = Array.from(map.values()).sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-        safeSetItem(STORAGE_KEYS.TAILORED_RESUMES, merged);
+        safeSetItem(key, merged);
         return merged;
       }
     } catch (_) {}
-    return this.getTailoredResumes();
+    return this.getTailoredResumes(userId);
   },
 
-  // Applications
-  getApplications(): SavedApplication[] {
-    return safeGetItem<SavedApplication[]>(STORAGE_KEYS.APPLICATIONS, []);
+  // Applications (Strictly User-Scoped)
+  getApplications(userId?: string): SavedApplication[] {
+    const key = getUserStorageKey(STORAGE_KEYS.APPLICATIONS, userId);
+    if (!key) return [];
+    return safeGetItem<SavedApplication[]>(key, []);
   },
 
-  saveApplication(app: SavedApplication): SavedApplication {
-    const list = this.getApplications();
+  saveApplication(app: SavedApplication, userId?: string): SavedApplication {
+    const key = getUserStorageKey(STORAGE_KEYS.APPLICATIONS, userId);
+    if (!key) return app;
+    const list = this.getApplications(userId);
     const index = list.findIndex((a) => a.id === app.id);
     let updated: SavedApplication[];
     if (index >= 0) {
@@ -321,7 +374,7 @@ export const repository = {
     } else {
       updated = [app, ...list];
     }
-    safeSetItem(STORAGE_KEYS.APPLICATIONS, updated);
+    safeSetItem(key, updated);
 
     // Sync to MongoDB Atlas asynchronously
     if (typeof window !== 'undefined') {
@@ -335,10 +388,12 @@ export const repository = {
     return app;
   },
 
-  deleteApplication(id: string): boolean {
-    const list = this.getApplications();
+  deleteApplication(id: string, userId?: string): boolean {
+    const key = getUserStorageKey(STORAGE_KEYS.APPLICATIONS, userId);
+    if (!key) return false;
+    const list = this.getApplications(userId);
     const filtered = list.filter((a) => a.id !== id);
-    safeSetItem(STORAGE_KEYS.APPLICATIONS, filtered);
+    safeSetItem(key, filtered);
 
     if (typeof window !== 'undefined') {
       fetch(`/api/applications/${id}`, { method: 'DELETE' }).catch((e) =>
@@ -349,25 +404,26 @@ export const repository = {
     return true;
   },
 
-  async syncApplicationsFromDb(): Promise<SavedApplication[]> {
-    if (typeof window === 'undefined') return this.getApplications();
+  async syncApplicationsFromDb(userId?: string): Promise<SavedApplication[]> {
+    const key = getUserStorageKey(STORAGE_KEYS.APPLICATIONS, userId);
+    if (!key || typeof window === 'undefined') return [];
     try {
       const res = await fetch('/api/applications');
-      if (!res.ok) return this.getApplications();
+      if (!res.ok) return this.getApplications(userId);
       const data = await res.json();
       if (Array.isArray(data.applications)) {
-        const local = this.getApplications();
+        const local = this.getApplications(userId);
         const map = new Map<string, SavedApplication>();
         local.forEach((a) => map.set(a.id, a));
         data.applications.forEach((a: SavedApplication) => map.set(a.id, a));
         const merged = Array.from(map.values()).sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-        safeSetItem(STORAGE_KEYS.APPLICATIONS, merged);
+        safeSetItem(key, merged);
         return merged;
       }
     } catch (_) {}
-    return this.getApplications();
+    return this.getApplications(userId);
   },
 
   // Settings
@@ -387,6 +443,11 @@ export const repository = {
   purgeAllUserData(): void {
     if (typeof window !== 'undefined') {
       Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
+      Object.keys(localStorage).forEach((k) => {
+        if (k.startsWith('resumecraft_')) {
+          localStorage.removeItem(k);
+        }
+      });
     }
     Object.keys(memoryStore).forEach((k) => delete memoryStore[k]);
   },

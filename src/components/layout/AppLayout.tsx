@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useUser } from '@auth0/nextjs-auth0/client';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
 import Link from 'next/link';
@@ -13,18 +14,27 @@ interface AppLayoutProps {
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
-  const [profileName, setProfileName] = React.useState('RUDRESH M');
+  const { user } = useUser();
+  const [profileName, setProfileName] = React.useState('Guest');
   const [dbConnected, setDbConnected] = React.useState<boolean | null>(null);
   const [aiStatus, setAiStatus] = React.useState<{ configured: boolean; label: string; model?: string } | null>(null);
 
   React.useEffect(() => {
-    try {
-      const p = repository.getProfile();
-      if (p?.personalInfo?.fullName) {
-        setProfileName(p.personalInfo.fullName);
+    if (user?.sub) {
+      repository.setActiveUserId(user.sub);
+      try {
+        const p = repository.getProfile(user.sub);
+        if (p?.personalInfo?.fullName) {
+          setProfileName(p.personalInfo.fullName);
+        } else if (user.name) {
+          setProfileName(user.name);
+        }
+      } catch (e) {
+        // ignore
       }
-    } catch (e) {
-      // ignore
+    } else {
+      repository.setActiveUserId(null);
+      setProfileName('Guest');
     }
 
     fetch('/api/db/status')
@@ -36,7 +46,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       .then((res) => res.json())
       .then((data) => setAiStatus(data))
       .catch(() => setAiStatus({ configured: false, label: 'Local Engine Active' }));
-  }, []);
+  }, [user]);
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-[#F5F5F7]">
@@ -63,10 +73,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </Link>
 
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              {profileName.split(' ')[0]}
-            </span>
+            {user ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                {profileName.split(' ')[0]}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#666666] bg-[#F0F0F2] px-2 py-0.5 rounded-full border border-[#E5E5E7]">
+                Guest
+              </span>
+            )}
 
             <Link href="/tailor">
               <Button size="sm" pill icon={<Sparkles className="w-3 h-3" />} className="text-xs px-2.5 py-1">
@@ -81,10 +97,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <div className="flex items-center gap-3 text-xs text-[#555555]">
             <div className="flex items-center gap-1.5">
               <span className="font-semibold text-[#1D1D1F]">Central Repository:</span>
-              <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                <CheckCircle2 className="w-3 h-3" />
-                {profileName} (Verified)
-              </span>
+              {user ? (
+                <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <CheckCircle2 className="w-3 h-3" />
+                  {profileName} (Verified)
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-[#666666] bg-[#F0F0F2] px-2 py-0.5 rounded-full border border-[#E5E5E7]">
+                  Guest Session
+                </span>
+              )}
             </div>
 
             {dbConnected !== null && (

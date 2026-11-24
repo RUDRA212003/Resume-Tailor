@@ -32,7 +32,7 @@ interface BottomNavProps {
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
-  profileName = 'RUDRESH M',
+  profileName = 'Guest',
   dbConnected = null,
   aiStatus = null,
 }) => {

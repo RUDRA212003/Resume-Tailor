@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useUser } from '@auth0/nextjs-auth0/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -135,9 +136,14 @@ Nice to have:
   const [isCopiedCoverLetter, setIsCopiedCoverLetter] = useState(false);
   const [showCoverLetterEdit, setShowCoverLetterEdit] = useState(false);
 
+  const { user } = useUser();
+
   useEffect(() => {
     setMounted(true);
-    const p = repository.getProfile();
+    if (user?.sub) {
+      repository.setActiveUserId(user.sub);
+    }
+    const p = repository.getProfile(user?.sub);
     setProfile(p);
     const tmpls = repository.getTemplates();
     setTemplates(tmpls);
@@ -149,7 +155,7 @@ Nice to have:
       .then((data) => {
         if (data && data.personalInfo) {
           setProfile(data);
-          repository.cacheProfile(data);
+          repository.cacheProfile(data, user?.sub);
         }
       })
       .catch(() => {});
@@ -208,7 +214,7 @@ Nice to have:
         setRawText(existing.rawText);
       }
     }
-  }, [preloadedResumeId, preloadedAppId, preloadedJdId]);
+  }, [preloadedResumeId, preloadedAppId, preloadedJdId, user?.sub]);
 
   // Handle File Upload (DOCX, PDF, TXT)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

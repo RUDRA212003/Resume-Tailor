@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useUser } from '@auth0/nextjs-auth0/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function HistoryPage() {
+  const { user } = useUser();
   const [mounted, setMounted] = useState(false);
   const [resumes, setResumes] = useState<TailoredResume[]>([]);
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
@@ -27,15 +29,22 @@ export default function HistoryPage() {
 
   useEffect(() => {
     setMounted(true);
-    setResumes(repository.getTailoredResumes());
-    setProfile(repository.getProfile());
     setTemplates(repository.getTemplates());
 
+    if (!user?.sub) {
+      setResumes([]);
+      setProfile(DEFAULT_PROFILE);
+      return;
+    }
+
+    setResumes(repository.getTailoredResumes(user.sub));
+    setProfile(repository.getProfile(user.sub));
+
     // Sync seamlessly with MongoDB Atlas
-    repository.syncTailoredResumesFromDb().then((synced) => {
+    repository.syncTailoredResumesFromDb(user.sub).then((synced) => {
       if (synced && synced.length > 0) setResumes(synced);
     });
-  }, []);
+  }, [user?.sub]);
 
   const downloadDocx = async (resume: TailoredResume) => {
     const template = templates.find((t) => t.id === resume.templateId) || templates[0];
