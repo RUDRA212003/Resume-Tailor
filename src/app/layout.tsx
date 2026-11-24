@@ -4,6 +4,7 @@ import { AuthModalProvider } from '@/context/AuthModalContext';
 import { PwaProvider } from '@/context/PwaContext';
 import { PwaInstallBanner } from '@/components/pwa/PwaInstallBanner';
 import { LoginPromptModal } from '@/components/auth/LoginPromptModal';
+import { IntroAnimation } from '@/components/intro/IntroAnimation';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -46,6 +47,7 @@ export default function RootLayout({
         <Auth0Provider>
           <AuthModalProvider>
             <PwaProvider>
+              <IntroAnimation />
               {children}
               <LoginPromptModal />
               <PwaInstallBanner />

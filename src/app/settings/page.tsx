@@ -276,6 +276,37 @@ export default function SettingsPage() {
           </div>
         </Card>
 
+        {/* Cinematic Opening Animation */}
+        <Card className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#0066CC] shrink-0" />
+              <div>
+                <h3 className="font-semibold text-xs text-[#1D1D1F]">
+                  Cinematic Opening Animation
+                </h3>
+                <p className="text-[11px] text-[#555555] mt-0.5">
+                  The 3D Magic Resume Box intro with flying credentials, synthesized sound, and haptics.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                try {
+                  sessionStorage.removeItem('rt_intro_played');
+                } catch (_) {}
+                window.location.reload();
+              }}
+              icon={<Sparkles className="w-3.5 h-3.5 text-[#0066CC] shrink-0" />}
+              className="self-start sm:self-auto font-medium"
+            >
+              Replay Intro Animation
+            </Button>
+          </div>
+        </Card>
+
         {/* Permanent Deletion (Section 14 Security) */}
         <Card className="border-red-200 bg-red-50/20 space-y-3">
           <div className="flex items-center gap-2">

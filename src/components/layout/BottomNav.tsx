@@ -259,6 +259,29 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 );
               })}
 
+              {/* Replay Cinematic Intro Button */}
+              <button
+                onClick={() => {
+                  haptics.light();
+                  try {
+                    sessionStorage.removeItem('rt_intro_played');
+                  } catch (_) {}
+                  window.location.reload();
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-[#F5F5F7] text-[#1D1D1F] transition-all text-left active:scale-98 touch-manipulation"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold">Replay Opening Cinematic</div>
+                    <div className="text-[11px] text-[#666666]">Watch the Magic Resume Box animation</div>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#999999]" />
+              </button>
+
               {/* Install Mobile App Prompt in More Drawer */}
               {isInstallable && !isInstalled && (
                 <button
