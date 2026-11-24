@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useUser } from '@auth0/nextjs-auth0/client';
+import { useAuthModal } from '@/context/AuthModalContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -24,7 +26,16 @@ import {
 import { TailoredResume, JobDescription, SavedApplication, ResumeTemplate } from '@/types';
 
 export default function DashboardPage() {
+  const { user } = useUser();
+  const { requireAuth } = useAuthModal();
   const [mounted, setMounted] = useState(false);
+
+  const handleProtectedClick = (e: React.MouseEvent, href: string, featureName: string) => {
+    if (!user) {
+      e.preventDefault();
+      requireAuth(href, featureName);
+    }
+  };
   const [tailoredResumes, setTailoredResumes] = useState<TailoredResume[]>([]);
   const [jobDescriptions, setJobDescriptions] = useState<JobDescription[]>([]);
   const [applications, setApplications] = useState<SavedApplication[]>([]);
@@ -130,12 +141,18 @@ export default function DashboardPage() {
           </div>
 
           <div className="shrink-0 flex items-center gap-3">
-            <Link href="/profile">
+            <Link
+              href="/profile"
+              onClick={(e) => handleProtectedClick(e, '/profile', 'Profile Management')}
+            >
               <Button variant="secondary" size="md">
                 Edit Profile
               </Button>
             </Link>
-            <Link href="/tailor">
+            <Link
+              href="/tailor"
+              onClick={(e) => handleProtectedClick(e, '/tailor', 'Resume Tailoring Studio')}
+            >
               <Button size="md" pill icon={<Sparkles className="w-4 h-4" />}>
                 Create Tailored Resume
               </Button>
@@ -215,7 +232,10 @@ export default function DashboardPage() {
                 Single source of truth: {totalVerifiedSkills} skills, {totalVerifiedExperiences} experiences, and {totalVerifiedProjects} projects verified. The AI will never invent facts outside these.
               </p>
             </div>
-            <Link href="/profile">
+            <Link
+              href="/profile"
+              onClick={(e) => handleProtectedClick(e, '/profile', 'Repository Facts')}
+            >
               <Button variant="secondary" size="sm">
                 Manage Repository Facts
               </Button>
@@ -329,7 +349,10 @@ export default function DashboardPage() {
                 <div className="py-8 text-center text-xs text-[#555555] space-y-3">
                   <FileText className="w-8 h-8 text-[#888888] mx-auto opacity-50" />
                   <p>No job descriptions analyzed yet.</p>
-                  <Link href="/tailor">
+                  <Link
+                    href="/tailor"
+                    onClick={(e) => handleProtectedClick(e, '/tailor', 'Job Description Tailoring')}
+                  >
                     <Button variant="secondary" size="sm">
                       Upload or paste a JD
                     </Button>

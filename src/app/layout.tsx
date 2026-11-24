@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { Auth0Provider } from '@auth0/nextjs-auth0/client';
+import { AuthModalProvider } from '@/context/AuthModalContext';
+import { LoginPromptModal } from '@/components/auth/LoginPromptModal';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -17,7 +19,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased selection:bg-[#0066CC]/20 selection:text-[#0066CC]" suppressHydrationWarning>
         <Auth0Provider>
-          {children}
+          <AuthModalProvider>
+            {children}
+            <LoginPromptModal />
+          </AuthModalProvider>
         </Auth0Provider>
       </body>
     </html>

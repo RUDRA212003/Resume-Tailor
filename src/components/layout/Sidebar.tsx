@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@auth0/nextjs-auth0/client';
+import { useAuthModal } from '@/context/AuthModalContext';
 import {
   LayoutDashboard,
   UserCheck,
@@ -66,6 +67,14 @@ const navItems: NavItem[] = [
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { user, isLoading } = useUser();
+  const { requireAuth } = useAuthModal();
+
+  const handleNavClick = (e: React.MouseEvent, href: string, name: string) => {
+    if (!user) {
+      e.preventDefault();
+      requireAuth(href, name);
+    }
+  };
 
   const handleLogout = () => {
     if (user?.sub) {
@@ -103,6 +112,7 @@ export const Sidebar: React.FC = () => {
             <Link
               key={item.href}
               href={item.href}
+              onClick={(e) => handleNavClick(e, item.href, item.name)}
               className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-[#F0F7FF] text-[#0066CC] font-semibold'

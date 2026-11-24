@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@auth0/nextjs-auth0/client';
+import { useAuthModal } from '@/context/AuthModalContext';
 import {
   LayoutDashboard,
   UserCheck,
@@ -38,6 +39,22 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   const pathname = usePathname();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const { user } = useUser();
+  const { requireAuth } = useAuthModal();
+
+  const handleTabClick = (e: React.MouseEvent, href: string, name: string) => {
+    if (href !== '/dashboard' && !user) {
+      e.preventDefault();
+      requireAuth(href, name);
+    }
+  };
+
+  const handleMoreItemClick = (e: React.MouseEvent, href: string, name: string) => {
+    setIsMoreOpen(false);
+    if (!user) {
+      e.preventDefault();
+      requireAuth(href, name);
+    }
+  };
 
   const handleLogout = () => {
     if (user?.sub) {
@@ -203,7 +220,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setIsMoreOpen(false)}
+                    onClick={(e) => handleMoreItemClick(e, item.href, item.name)}
                     className={`flex items-center justify-between p-3 rounded-xl transition-colors ${
                       isActive
                         ? 'bg-[#F0F7FF] text-[#0066CC] font-semibold border border-[#0066CC]/20'
@@ -251,7 +268,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white/95 backdrop-blur-xl border-t border-[#E5E5E7] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-safe select-none"
       >
         <div className="flex items-center justify-around h-16 px-1 max-w-lg mx-auto">
-          {/* Dashboard */}
+          {/* Dashboard and Profile */}
           {mainTabs.slice(0, 2).map((tab) => {
             const isActive = pathname === tab.href;
             const Icon = tab.icon;
@@ -259,6 +276,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <Link
                 key={tab.href}
                 href={tab.href}
+                onClick={(e) => handleTabClick(e, tab.href, tab.name)}
                 className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-all ${
                   isActive
                     ? 'text-[#0066CC] font-semibold'
@@ -279,6 +297,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           {/* Elevated Center Action Button: Tailor */}
           <Link
             href="/tailor"
+            onClick={(e) => handleTabClick(e, '/tailor', 'Tailor Studio')}
             className="flex flex-col items-center justify-center flex-1 h-full py-1 group"
           >
             <div
@@ -307,6 +326,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <Link
                 key={tab.href}
                 href={tab.href}
+                onClick={(e) => handleTabClick(e, tab.href, tab.name)}
                 className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-all ${
                   isActive
                     ? 'text-[#0066CC] font-semibold'

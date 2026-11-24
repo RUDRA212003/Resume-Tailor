@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth0, isAuth0Configured } from '@/lib/auth0';
 
+const protectedPages = [
+  '/profile',
+  '/tailor',
+  '/applications',
+  '/history',
+  '/settings',
+  '/templates',
+];
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Convenience aliases for standard /api/auth routes -> /auth
+  // 1. Convenience aliases for standard /api/auth routes -> /auth
   if (pathname === '/api/auth/login') {
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
@@ -15,12 +24,44 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/callback', request.url));
   }
 
-  // If Auth0 is fully configured, let Auth0 middleware handle /auth/* routes & session cookies
+  // 2. Auth0 internal route handler (/auth/login, /auth/logout, /auth/callback, etc.)
+  if (pathname.startsWith('/auth')) {
+    if (isAuth0Configured()) {
+      try {
+        return await auth0.middleware(request);
+      } catch (err) {
+        console.error('Auth0 middleware error:', err);
+      }
+    }
+    return NextResponse.next();
+  }
+
+  // 3. Server-side Route Guard for protected application pages
+  const isProtected = protectedPages.some(
+    (page) => pathname === page || pathname.startsWith(`${page}/`)
+  );
+
+  if (isProtected && isAuth0Configured()) {
+    try {
+      const session = await auth0.getSession(request);
+      if (!session || !session.user) {
+        const loginUrl = new URL('/auth/login', request.url);
+        loginUrl.searchParams.set('returnTo', pathname);
+        return NextResponse.redirect(loginUrl);
+      }
+    } catch {
+      const loginUrl = new URL('/auth/login', request.url);
+      loginUrl.searchParams.set('returnTo', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // 4. Default passthrough for other routes and API endpoints
   if (isAuth0Configured()) {
     try {
       return await auth0.middleware(request);
     } catch (err) {
-      console.error('Auth0 middleware error:', err);
+      console.error('Auth0 middleware session sync error:', err);
     }
   }
 
