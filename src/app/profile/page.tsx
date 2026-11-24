@@ -64,7 +64,7 @@ export default function ProfilePage() {
       .then((data) => {
         if (data && data.personalInfo) {
           setProfile(data);
-          repository.cacheProfile(data);
+          repository.cacheProfile(data, data.userId);
           setSavedSnapshot(JSON.stringify(data));
         }
       })

@@ -8,6 +8,7 @@ import { GET as getApplications, POST as postApplication } from '../src/app/api/
 import { GET as getApplicationById, DELETE as deleteApplicationById } from '../src/app/api/applications/[id]/route.ts';
 import { GET as getUserMe } from '../src/app/api/user/me/route.ts';
 import { GET as getAdminUsers } from '../src/app/api/admin/users/route.ts';
+import { GET as getProfile, POST as postProfile } from '../src/app/api/profile/route.ts';
 
 function createMockRequest(url, { method = 'GET', body = null, headers = {} } = {}) {
   const init = {
@@ -179,5 +180,58 @@ describe('Multi-User Security & Data Isolation Tests', () => {
     assert.equal(adminRes.status, 200, 'Admin must be granted access');
     const data = await adminRes.json();
     assert.ok(data.users.length >= 2, 'Admin should see synced users');
+  });
+
+  it('10. Multi-device / Email linking: User A logging in on another device with same email retains saved profile and data', async () => {
+    // 1. Device 1: Alice saves her rich profile
+    const aliceProfile = {
+      id: 'profile_alice',
+      userId: 'auth0|test_user_alice_101',
+      personalInfo: {
+        fullName: 'Alice Smith',
+        email: 'alice@example.com',
+        phone: '+1 555 123 4567',
+        location: 'San Francisco, CA',
+        linkedinUrl: 'https://linkedin.com/in/alice',
+        githubUrl: 'https://github.com/alice',
+      },
+      summaries: [],
+      skills: [{ id: 'sk-1', name: 'TypeScript', category: 'Programming Languages', isVerified: true, aliases: [] }],
+      experiences: [],
+      projects: [],
+      education: [],
+      certifications: [],
+      achievements: [],
+      updatedAt: new Date().toISOString(),
+    };
+
+    const saveReq = createMockRequest('http://localhost:3000/api/profile', {
+      method: 'POST',
+      headers: USER_A_HEADERS,
+      body: aliceProfile,
+    });
+    const saveRes = await postProfile(saveReq);
+    assert.equal(saveRes.status, 200);
+
+    // 2. Device 2: Alice logs in via Google OAuth on another device (different provider ID, same email)
+    const USER_A_DEVICE_2_HEADERS = {
+      'x-test-auth0-id': 'google-oauth2|alice_google_99999',
+      'x-test-user-name': 'Alice Smith',
+      'x-test-user-email': 'alice@example.com',
+    };
+
+    // When Device 2 fetches the profile, it must receive Alice's saved details instead of an empty profile
+    const getReq = createMockRequest('http://localhost:3000/api/profile', {
+      headers: USER_A_DEVICE_2_HEADERS,
+    });
+    const getRes = await getProfile(getReq);
+    assert.equal(getRes.status, 200);
+    const loadedProfile = await getRes.json();
+
+    assert.equal(loadedProfile.personalInfo.fullName, 'Alice Smith');
+    assert.equal(loadedProfile.personalInfo.phone, '+1 555 123 4567');
+    assert.equal(loadedProfile.personalInfo.email, 'alice@example.com');
+    assert.equal(loadedProfile.skills.length, 1);
+    assert.equal(loadedProfile.skills[0].name, 'TypeScript');
   });
 });

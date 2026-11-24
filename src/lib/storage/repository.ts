@@ -42,7 +42,7 @@ if (typeof window !== 'undefined') {
 }
 
 function resolveUserId(userId?: string): string | null {
-  return userId || currentActiveUserId || null;
+  return userId || currentActiveUserId || (typeof window !== 'undefined' ? localStorage.getItem('resumecraft_active_uid') : null);
 }
 
 function getUserStorageKey(baseKey: string, userId?: string | null): string | null {
@@ -88,9 +88,23 @@ export const repository = {
    */
   setActiveUserId(userId: string | null): void {
     currentActiveUserId = userId;
+    if (typeof window !== 'undefined') {
+      try {
+        if (userId) {
+          localStorage.setItem('resumecraft_active_uid', userId);
+        } else {
+          localStorage.removeItem('resumecraft_active_uid');
+        }
+      } catch (_) {}
+    }
   },
 
   getActiveUserId(): string | null {
+    if (!currentActiveUserId && typeof window !== 'undefined') {
+      try {
+        currentActiveUserId = localStorage.getItem('resumecraft_active_uid');
+      } catch (_) {}
+    }
     return currentActiveUserId;
   },
 
@@ -114,6 +128,9 @@ export const repository = {
         });
       }
       currentActiveUserId = null;
+      try {
+        localStorage.removeItem('resumecraft_active_uid');
+      } catch (_) {}
     } catch (e) {
       console.error('Error clearing user cache:', e);
     }
@@ -121,19 +138,29 @@ export const repository = {
 
   // User Profile (multi-user scoped)
   getProfile(userId?: string): Profile {
-    const key = getUserStorageKey(STORAGE_KEYS.PROFILE, userId);
+    const targetUid = userId || currentActiveUserId || this.getActiveUserId();
+    const key = getUserStorageKey(STORAGE_KEYS.PROFILE, targetUid);
     return safeGetItem<Profile>(key, DEFAULT_PROFILE);
   },
 
   cacheProfile(profile: Profile, userId?: string): void {
-    const key = getUserStorageKey(STORAGE_KEYS.PROFILE, userId);
+    const targetUid = userId || profile.userId || currentActiveUserId || this.getActiveUserId();
+    if (targetUid && !currentActiveUserId) {
+      this.setActiveUserId(targetUid);
+    }
+    const key = getUserStorageKey(STORAGE_KEYS.PROFILE, targetUid);
     safeSetItem(key, profile);
   },
 
   saveProfile(profile: Profile, userId?: string): Profile {
-    const key = getUserStorageKey(STORAGE_KEYS.PROFILE, userId);
+    const targetUid = userId || profile.userId || currentActiveUserId || this.getActiveUserId();
+    if (targetUid && !currentActiveUserId) {
+      this.setActiveUserId(targetUid);
+    }
+    const key = getUserStorageKey(STORAGE_KEYS.PROFILE, targetUid);
     const updated = {
       ...profile,
+      userId: targetUid || profile.userId,
       updatedAt: new Date().toISOString(),
     };
     safeSetItem(key, updated);

@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       ...profile,
       userId: auth.auth0Id,
+      userEmail: auth.user.email,
       _storage: isMongoConfigured() ? 'mongodb' : 'memory',
       savedToDb: isMongoConfigured(),
     });
@@ -47,11 +48,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Force verified identity from session, never trust body.userId
-    const saved = await mongoRepository.saveProfile(auth.auth0Id, body);
+    const saved = await mongoRepository.saveProfile(auth.auth0Id, body, auth.user.email);
 
     return NextResponse.json({
       ...saved,
       userId: auth.auth0Id,
+      userEmail: auth.user.email,
       _storage: isMongoConfigured() ? 'mongodb' : 'memory',
       savedToDb: isMongoConfigured(),
     });

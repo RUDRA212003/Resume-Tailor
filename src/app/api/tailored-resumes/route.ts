@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
       return auth;
     }
 
-    const resumes = await mongoRepository.getTailoredResumes(auth.auth0Id);
+    const resumes = await mongoRepository.getTailoredResumes(auth.auth0Id, auth.user.email);
     return NextResponse.json({
       resumes,
       _storage: isMongoConfigured() ? 'mongodb' : 'memory',

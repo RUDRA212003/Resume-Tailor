@@ -122,6 +122,7 @@ export interface AchievementItem {
 export interface Profile {
   id: string;
   userId: string;
+  userEmail?: string;
   personalInfo: PersonalInfo;
   summaries: SummaryVersion[];
   skills: SkillItem[];

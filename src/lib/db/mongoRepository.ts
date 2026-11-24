@@ -45,9 +45,15 @@ async function ensureIndexes() {
   if (indexesInitialized || !isMongoConfigured()) return;
   try {
     const db = await getMongoDb();
+    // Drop legacy unique index on userId to allow seamless multi-device/multi-provider email linking
+    try {
+      await db.collection('profiles').dropIndex('userId_1');
+    } catch (_) {}
+
     await Promise.all([
       db.collection('users').createIndex({ auth0Id: 1 }, { unique: true }),
-      db.collection('profiles').createIndex({ userId: 1 }, { unique: true }),
+      db.collection('profiles').createIndex({ userId: 1 }),
+      db.collection('profiles').createIndex({ userEmail: 1 }),
       db.collection('job_descriptions').createIndex({ userId: 1, createdAt: -1 }),
       db.collection('tailored_resumes').createIndex({ userId: 1, createdAt: -1 }),
       db.collection('saved_applications').createIndex({ userId: 1, createdAt: -1 }),
@@ -58,6 +64,51 @@ async function ensureIndexes() {
   } catch (err) {
     console.warn('Index initialization note (non-fatal):', err);
   }
+}
+
+function evaluateProfileCompleteness(p: Profile): number {
+  let score = 0;
+  const pi = p.personalInfo;
+  if (pi) {
+    if (pi.fullName && pi.fullName.trim() && pi.fullName.trim().toLowerCase() !== pi.email?.trim().toLowerCase()) {
+      score += 20;
+    }
+    if (pi.phone && pi.phone.trim().length > 3) score += 15;
+    if (pi.location && pi.location.trim()) score += 10;
+    if (pi.linkedinUrl && pi.linkedinUrl.trim()) score += 5;
+    if (pi.githubUrl && pi.githubUrl.trim()) score += 5;
+  }
+  if (p.skills && Array.isArray(p.skills)) score += p.skills.length * 2;
+  if (p.experiences && Array.isArray(p.experiences)) score += p.experiences.length * 5;
+  if (p.projects && Array.isArray(p.projects)) score += p.projects.length * 5;
+  if (p.education && Array.isArray(p.education)) score += p.education.length * 5;
+  if (p.summaries && Array.isArray(p.summaries)) score += p.summaries.length * 5;
+  return score;
+}
+
+async function getAllUserIdsForUser(userId: string, userEmail?: string): Promise<string[]> {
+  const ids = new Set<string>([userId]);
+  if (!isMongoConfigured()) return Array.from(ids);
+  try {
+    const db = await getMongoDb();
+    let email = userEmail;
+    if (!email) {
+      const u = await db.collection<UserRecord>('users').findOne({ auth0Id: userId });
+      if (u?.email) email = u.email;
+    }
+    if (email && email.trim()) {
+      const normalized = email.trim().toLowerCase();
+      const users = await db.collection<UserRecord>('users')
+        .find({ email: { $regex: new RegExp(`^${normalized}$`, 'i') } })
+        .toArray();
+      for (const u of users) {
+        if (u.auth0Id) ids.add(u.auth0Id);
+      }
+    }
+  } catch (err) {
+    console.error('Error resolving linked user IDs:', err);
+  }
+  return Array.from(ids);
 }
 
 function createDefaultUserProfile(userId: string, name?: string, email?: string): Profile {
@@ -161,13 +212,26 @@ export const mongoRepository = {
   },
 
   // ============================================================================
-  // 1. User Profiles (Strictly isolated by userId)
+  // 1. User Profiles (Strictly isolated by userEmail & userId)
   // ============================================================================
   async getProfile(userId: string, userName?: string, userEmail?: string): Promise<Profile> {
+    const normalizedEmail = (userEmail || '').trim().toLowerCase();
+
     if (!isMongoConfigured()) {
-      const existing = memoryStore.profiles.get(userId);
-      if (existing) return existing;
+      let existing = memoryStore.profiles.get(userId);
+      if (!existing && normalizedEmail) {
+        existing = Array.from(memoryStore.profiles.values()).find(
+          (p) =>
+            (p as any).userEmail?.toLowerCase() === normalizedEmail ||
+            p.personalInfo?.email?.toLowerCase() === normalizedEmail
+        );
+      }
+      if (existing) {
+        memoryStore.profiles.set(userId, existing);
+        return existing;
+      }
       const initial = createDefaultUserProfile(userId, userName, userEmail);
+      if (normalizedEmail) (initial as any).userEmail = normalizedEmail;
       memoryStore.profiles.set(userId, initial);
       return initial;
     }
@@ -176,31 +240,104 @@ export const mongoRepository = {
       await ensureIndexes();
       const db = await getMongoDb();
       const coll = db.collection<Profile>('profiles');
-      const doc = await coll.findOne({ userId });
 
-      if (!doc) {
-        const initial = createDefaultUserProfile(userId, userName, userEmail);
-        await coll.insertOne(initial);
-        return initial;
+      let effectiveEmail = normalizedEmail;
+      if (!effectiveEmail) {
+        const u = await db.collection<UserRecord>('users').findOne({ auth0Id: userId });
+        if (u?.email) effectiveEmail = u.email.trim().toLowerCase();
       }
 
-      return doc;
+      let candidates: Profile[] = [];
+      if (effectiveEmail) {
+        candidates = await coll
+          .find({
+            $or: [
+              { userId },
+              { userEmail: effectiveEmail },
+              { 'personalInfo.email': { $regex: new RegExp(`^${effectiveEmail}$`, 'i') } },
+            ],
+          })
+          .toArray();
+      } else {
+        const doc = await coll.findOne({ userId });
+        if (doc) candidates.push(doc);
+      }
+
+      if (candidates.length > 0) {
+        // Pick the most complete profile
+        const best = candidates.sort(
+          (a, b) => evaluateProfileCompleteness(b) - evaluateProfileCompleteness(a)
+        )[0];
+
+        // Clean up any empty 0-score duplicate placeholder docs for this email/userId
+        for (const cand of candidates) {
+          const candId = (cand as any)._id;
+          if (candId && candId.toString() !== (best as any)._id?.toString()) {
+            if (evaluateProfileCompleteness(cand) === 0) {
+              await coll.deleteOne({ _id: candId });
+            }
+          }
+        }
+
+        const updatedUserEmail =
+          effectiveEmail ||
+          (best as any).userEmail ||
+          best.personalInfo?.email?.toLowerCase().trim();
+
+        await coll.updateOne(
+          { _id: (best as any)._id },
+          {
+            $set: {
+              userId,
+              ...(updatedUserEmail ? { userEmail: updatedUserEmail } : {}),
+              updatedAt: new Date().toISOString(),
+            },
+          }
+        );
+
+        return {
+          ...best,
+          userId,
+          ...(updatedUserEmail ? { userEmail: updatedUserEmail } : {}),
+        };
+      }
+
+      const initial = createDefaultUserProfile(userId, userName, effectiveEmail || userEmail);
+      if (effectiveEmail) {
+        (initial as any).userEmail = effectiveEmail;
+      }
+      await coll.insertOne(initial);
+      return initial;
     } catch (err) {
       console.error('Mongo getProfile error:', err);
       return createDefaultUserProfile(userId, userName, userEmail);
     }
   },
 
-  async saveProfile(userId: string, profile: Profile): Promise<Profile> {
+  async saveProfile(userId: string, profile: Profile, userEmail?: string): Promise<Profile> {
     const { _id, ...rest } = profile as any;
+    let effectiveEmail = (userEmail || profile.personalInfo?.email || '').trim().toLowerCase();
+
+    if (!effectiveEmail && isMongoConfigured()) {
+      try {
+        const db = await getMongoDb();
+        const u = await db.collection<UserRecord>('users').findOne({ auth0Id: userId });
+        if (u?.email) effectiveEmail = u.email.trim().toLowerCase();
+      } catch (_) {}
+    }
+
     const updated: Profile = {
       ...rest,
       userId, // Strictly enforce authenticated userId
+      ...(effectiveEmail ? { userEmail: effectiveEmail } : {}),
       updatedAt: new Date().toISOString(),
     };
 
     if (!isMongoConfigured()) {
       memoryStore.profiles.set(userId, updated);
+      if (effectiveEmail) {
+        memoryStore.profiles.set(`email_${effectiveEmail}`, updated);
+      }
       return updated;
     }
 
@@ -208,11 +345,23 @@ export const mongoRepository = {
       await ensureIndexes();
       const db = await getMongoDb();
       const coll = db.collection<Profile>('profiles');
-      await coll.updateOne(
-        { userId },
-        { $set: updated },
-        { upsert: true }
-      );
+
+      const filter: any = effectiveEmail
+        ? {
+            $or: [
+              { userId },
+              { userEmail: effectiveEmail },
+              { 'personalInfo.email': { $regex: new RegExp(`^${effectiveEmail}$`, 'i') } },
+            ],
+          }
+        : { userId };
+
+      const existing = await coll.findOne(filter);
+      if (existing) {
+        await coll.updateOne({ _id: (existing as any)._id }, { $set: updated });
+      } else {
+        await coll.insertOne(updated);
+      }
       return updated;
     } catch (err) {
       console.error('Mongo saveProfile error:', err);
@@ -223,7 +372,7 @@ export const mongoRepository = {
   // ============================================================================
   // 2. Job Descriptions (Isolated by userId)
   // ============================================================================
-  async getJobDescriptions(userId: string): Promise<JobDescription[]> {
+  async getJobDescriptions(userId: string, userEmail?: string): Promise<JobDescription[]> {
     if (!isMongoConfigured()) {
       return Array.from(memoryStore.jobDescriptions.values())
         .filter((jd) => jd.userId === userId)
@@ -233,7 +382,8 @@ export const mongoRepository = {
       await ensureIndexes();
       const db = await getMongoDb();
       const coll = db.collection<JobDescription>('job_descriptions');
-      return await coll.find({ userId }).sort({ createdAt: -1 }).toArray();
+      const allIds = await getAllUserIdsForUser(userId, userEmail);
+      return await coll.find({ userId: { $in: allIds } }).sort({ createdAt: -1 }).toArray();
     } catch (err) {
       console.error('Mongo getJobDescriptions error:', err);
       return [];
@@ -301,7 +451,7 @@ export const mongoRepository = {
   // ============================================================================
   // 3. Tailored Resumes (Isolated by userId, IDOR protected)
   // ============================================================================
-  async getTailoredResumes(userId: string): Promise<TailoredResume[]> {
+  async getTailoredResumes(userId: string, userEmail?: string): Promise<TailoredResume[]> {
     if (!isMongoConfigured()) {
       return Array.from(memoryStore.tailoredResumes.values())
         .filter((r) => r.userId === userId)
@@ -311,7 +461,8 @@ export const mongoRepository = {
       await ensureIndexes();
       const db = await getMongoDb();
       const coll = db.collection<TailoredResume>('tailored_resumes');
-      return await coll.find({ userId }).sort({ createdAt: -1 }).toArray();
+      const allIds = await getAllUserIdsForUser(userId, userEmail);
+      return await coll.find({ userId: { $in: allIds } }).sort({ createdAt: -1 }).toArray();
     } catch (err) {
       console.error('Mongo getTailoredResumes error:', err);
       return [];
@@ -380,7 +531,7 @@ export const mongoRepository = {
   // ============================================================================
   // 4. Saved Applications (Isolated by userId, IDOR protected)
   // ============================================================================
-  async getApplications(userId: string): Promise<SavedApplication[]> {
+  async getApplications(userId: string, userEmail?: string): Promise<SavedApplication[]> {
     if (!isMongoConfigured()) {
       return Array.from(memoryStore.applications.values())
         .filter((a) => a.userId === userId)
@@ -390,7 +541,8 @@ export const mongoRepository = {
       await ensureIndexes();
       const db = await getMongoDb();
       const coll = db.collection<SavedApplication>('saved_applications');
-      return await coll.find({ userId }).sort({ createdAt: -1 }).toArray();
+      const allIds = await getAllUserIdsForUser(userId, userEmail);
+      return await coll.find({ userId: { $in: allIds } }).sort({ createdAt: -1 }).toArray();
     } catch (err) {
       console.error('Mongo getApplications error:', err);
       return [];

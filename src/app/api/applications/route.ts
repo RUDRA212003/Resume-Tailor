@@ -11,19 +11,10 @@ export async function GET(req: NextRequest) {
     const auth = await requireAuth(req);
     if (auth instanceof NextResponse) return auth;
 
-    if (isMongoConfigured()) {
-      const applications = await mongoRepository.getApplications(auth.auth0Id);
-      return NextResponse.json({
-        applications,
-        _storage: 'mongodb',
-        count: applications.length,
-      });
-    }
-
-    const applications = await mongoRepository.getApplications(auth.auth0Id);
+    const applications = await mongoRepository.getApplications(auth.auth0Id, auth.user.email);
     return NextResponse.json({
       applications,
-      _storage: 'memory',
+      _storage: isMongoConfigured() ? 'mongodb' : 'memory',
       count: applications.length,
     });
   } catch (error: any) {
