@@ -35,6 +35,7 @@ import {
   ShieldCheck,
   AlertCircle,
   ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -333,8 +334,14 @@ export default function ProfilePage() {
     if (!file) return;
 
     setIsImporting(true);
+    setSaveStatus({
+      type: 'warning',
+      message: 'Uploading & extracting resume data using AI...',
+    });
+
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('extractProfile', 'true');
 
     try {
       const res = await fetch('/api/parse-document', {
@@ -342,16 +349,48 @@ export default function ProfilePage() {
         body: formData,
       });
       const data = await res.json();
-      if (data.text) {
-        alert(
-          `Document text extracted (${data.wordCount} words). Review your profile fields below and click Save.`
-        );
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to process resume');
       }
-    } catch (err) {
-      console.error(err);
-      alert('Could not parse resume file.');
+
+      if (data.isScannedOrUnreadable) {
+        haptics.warning();
+        alert(data.warning || 'Scanned or unreadable document.');
+        setSaveStatus({
+          type: 'warning',
+          message: data.warning || 'Scanned or unreadable document.',
+        });
+        return;
+      }
+
+      if (data.profile) {
+        haptics.success();
+        const extracted: Profile = data.profile;
+        setProfile(extracted);
+        repository.saveProfile(extracted);
+        setActiveTab('personal');
+        setSaveStatus({
+          type: 'success',
+          message: `✨ AI successfully extracted your profile (${data.wordCount} words)! Review and click 'Save Changes' to synchronize with MongoDB.`,
+        });
+      } else if (data.text) {
+        setSaveStatus({
+          type: 'warning',
+          message: `Text extracted (${data.wordCount} words). Review and update fields.`,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error importing resume:', err);
+      haptics.warning();
+      alert('Could not parse resume: ' + (err.message || 'Unknown error'));
+      setSaveStatus({
+        type: 'error',
+        message: 'Could not parse resume: ' + (err.message || 'Unknown error'),
+      });
     } finally {
       setIsImporting(false);
+      e.target.value = '';
     }
   };
 
@@ -416,9 +455,9 @@ export default function ProfilePage() {
                 onChange={handleResumeFileUpload}
                 disabled={isImporting}
               />
-              <span className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white text-[#1D1D1F] border border-[#E5E5E7] rounded-lg hover:bg-[#F5F5F7] transition-colors">
-                <Upload className="w-3.5 h-3.5" />
-                {isImporting ? 'Importing...' : 'Import Resume File'}
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 shadow-sm transition-all cursor-pointer">
+                <Sparkles className="w-3.5 h-3.5 animate-spin-slow" />
+                {isImporting ? 'AI Extracting Details...' : 'Auto-Fill with AI (Upload Resume)'}
               </span>
             </label>
 
