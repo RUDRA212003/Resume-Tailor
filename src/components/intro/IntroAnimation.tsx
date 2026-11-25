@@ -6,145 +6,30 @@ import {
   FileText,
   User,
   GraduationCap,
-  Award,
   Briefcase,
   Code2,
-  Trophy,
-  FolderGit2,
-  Target,
   Volume2,
   VolumeX,
   FastForward,
-  ShieldCheck,
-  CheckCircle2,
 } from 'lucide-react';
 import { haptics } from '@/lib/haptics';
 import { soundFx } from '@/lib/audio/soundFx';
 
-// The 10 Career & Resume Items flying into the box
-interface FlyingItem {
+// The 5 essential career items (pure visual tokens, zero text)
+interface CareerItem {
   id: number;
-  title: string;
-  subtitle: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-  gradient: string;
-  startX: number; // in vw (-80 to 80)
-  startY: number; // in vh (-80 to 80)
-  rotate: number; // initial rotation degrees
+  type: 'resume' | 'profile' | 'education' | 'experience' | 'skills';
+  startX: number; // in vw
+  startY: number; // in vh
+  rotate: number; // degrees
 }
 
-const CAREER_ITEMS: FlyingItem[] = [
-  {
-    id: 1,
-    title: 'Verified Resume',
-    subtitle: 'ATS Optimized Document',
-    icon: FileText,
-    color: '#0066CC',
-    gradient: 'from-[#0066CC] to-[#004494]',
-    startX: -65,
-    startY: -50,
-    rotate: -24,
-  },
-  {
-    id: 2,
-    title: 'Professional Profile',
-    subtitle: 'Identity & Ground Truth',
-    icon: User,
-    color: '#6366F1',
-    gradient: 'from-[#6366F1] to-[#4338CA]',
-    startX: 70,
-    startY: -45,
-    rotate: 22,
-  },
-  {
-    id: 3,
-    title: 'BS Computer Science',
-    subtitle: 'Graduation Degree',
-    icon: GraduationCap,
-    color: '#8B5CF6',
-    gradient: 'from-[#8B5CF6] to-[#6D28D9]',
-    startX: -75,
-    startY: 20,
-    rotate: 18,
-  },
-  {
-    id: 4,
-    title: 'AWS & Cloud Certified',
-    subtitle: 'Industry Credentials',
-    icon: Award,
-    color: '#EC4899',
-    gradient: 'from-[#EC4899] to-[#BE185D]',
-    startX: 65,
-    startY: 35,
-    rotate: -19,
-  },
-  {
-    id: 5,
-    title: 'Software Engineer',
-    subtitle: 'Production Work History',
-    icon: Briefcase,
-    color: '#0284C7',
-    gradient: 'from-[#0284C7] to-[#0369A1]',
-    startX: -40,
-    startY: -70,
-    rotate: 14,
-  },
-  {
-    id: 6,
-    title: 'Technical Skills Matrix',
-    subtitle: 'React, Node, Cloud, SQL',
-    icon: Code2,
-    color: '#10B981',
-    gradient: 'from-[#10B981] to-[#047857]',
-    startX: 55,
-    startY: -65,
-    rotate: -28,
-  },
-  {
-    id: 7,
-    title: 'Top Performer Award',
-    subtitle: 'Career Achievement',
-    icon: Trophy,
-    color: '#F59E0B',
-    gradient: 'from-[#F59E0B] to-[#D97706]',
-    startX: -70,
-    startY: 55,
-    rotate: -15,
-  },
-  {
-    id: 8,
-    title: 'Portfolio & System Architecture',
-    subtitle: 'Verified Case Studies',
-    icon: FolderGit2,
-    color: '#14B8A6',
-    gradient: 'from-[#14B8A6] to-[#0F766E]',
-    startX: 75,
-    startY: -20,
-    rotate: 30,
-  },
-  {
-    id: 9,
-    title: 'Granular Impact Bullets',
-    subtitle: 'Metrics & Responsibilities',
-    icon: Target,
-    color: '#3B82F6',
-    gradient: 'from-[#3B82F6] to-[#1D4ED8]',
-    startX: -30,
-    startY: 75,
-    rotate: 25,
-  },
-  {
-    id: 10,
-    title: 'Target Job Description',
-    subtitle: 'ATS 98% Match Goal',
-    icon: Sparkles,
-    color: '#0071E3',
-    gradient: 'from-[#0071E3] to-[#2997FF]',
-    startX: 40,
-    startY: 70,
-    rotate: -12,
-  },
+const CAREER_ITEMS: CareerItem[] = [
+  { id: 1, type: 'resume', startX: -52, startY: -38, rotate: -16 },
+  { id: 2, type: 'profile', startX: 50, startY: -32, rotate: 14 },
+  { id: 3, type: 'education', startX: -55, startY: 28, rotate: -12 },
+  { id: 4, type: 'experience', startX: 48, startY: 34, rotate: 12 },
+  { id: 5, type: 'skills', startX: 8, startY: -54, rotate: -8 },
 ];
 
 export const IntroAnimation: React.FC = () => {
@@ -153,6 +38,7 @@ export const IntroAnimation: React.FC = () => {
   const [activeItemIndex, setActiveItemIndex] = useState<number>(-1);
   const [absorbedItems, setAbsorbedItems] = useState<number[]>([]);
   const [boxReaction, setBoxReaction] = useState<boolean>(false);
+  const [isLidClosed, setIsLidClosed] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
   const timersRef = useRef<NodeJS.Timeout[]>([]);
@@ -173,7 +59,8 @@ export const IntroAnimation: React.FC = () => {
     }, 600);
   }, [addTimer]);
 
-  const handleSkip = () => {
+  const handleSkip = (e: React.MouseEvent) => {
+    e.stopPropagation();
     haptics.selection();
     finishAnimation();
   };
@@ -183,6 +70,12 @@ export const IntroAnimation: React.FC = () => {
     const muted = soundFx.toggleMute();
     setIsMuted(muted);
     haptics.light();
+  };
+
+  // Immediate interaction unlock for mobile browsers (especially Android Chrome)
+  const handleTouchUnlock = () => {
+    haptics.notifyUserInteraction();
+    soundFx.unlock();
   };
 
   useEffect(() => {
@@ -205,66 +98,65 @@ export const IntroAnimation: React.FC = () => {
     setShouldRender(true);
     setIsMuted(soundFx.getMuted());
 
-    // SCENE 1: Box Reveal (0.0s – 1.8s)
+    // SCENE 1: Box Reveal (0.0s – 1.4s)
     soundFx.playBoxReveal();
-    haptics.light();
 
-    // SCENE 2: Item Flight Sequence (1.8s – 5.8s)
-    // Progressively accelerating interval between item launches
-    const itemSchedule = [
-      { itemIdx: 0, delay: 1800, duration: 800 },
-      { itemIdx: 1, delay: 2200, duration: 750 },
-      { itemIdx: 2, delay: 2600, duration: 700 },
-      { itemIdx: 3, delay: 2950, duration: 650 },
-      { itemIdx: 4, delay: 3300, duration: 600 },
-      { itemIdx: 5, delay: 3620, duration: 550 },
-      { itemIdx: 6, delay: 3920, duration: 500 },
-      { itemIdx: 7, delay: 4200, duration: 460 },
-      { itemIdx: 8, delay: 4460, duration: 420 },
-      { itemIdx: 9, delay: 4700, duration: 380 },
+    // SCENE 2: Item Flight Sequence (1.4s – 4.2s)
+    // 5 items, each arriving at the box with precision timing
+    const schedule = [
+      { itemIdx: 0, launch: 1400, arrival: 2050 },
+      { itemIdx: 1, launch: 1950, arrival: 2550 },
+      { itemIdx: 2, launch: 2450, arrival: 3000 },
+      { itemIdx: 3, launch: 2900, arrival: 3400 },
+      { itemIdx: 4, launch: 3300, arrival: 3750 },
     ];
 
     addTimer(() => {
       setScene(2);
-    }, 1800);
+    }, 1400);
 
-    itemSchedule.forEach(({ itemIdx, delay, duration }) => {
+    schedule.forEach(({ itemIdx, launch, arrival }) => {
       // Launch item
       addTimer(() => {
         setActiveItemIndex(itemIdx);
-      }, delay);
+        soundFx.playPaperFlutter();
+      }, launch);
 
-      // Contact / Box Absorption moment
+      // Contact / Box absorption moment
       addTimer(() => {
-        // Visual impact reaction
         setAbsorbedItems((prev) => [...prev, itemIdx]);
         setBoxReaction(true);
         addTimer(() => setBoxReaction(false), 140);
 
-        // Synchronized Sound & Haptic Feedback
+        // Synchronized Sound & Haptic Feedback at exact visual impact
         soundFx.playItemDrop(itemIdx);
         haptics.light();
-      }, delay + duration);
+      }, arrival);
     });
 
-    // SCENE 3: Magic Transformation (5.6s – 7.4s)
+    // SCENE 3: Lid Closes (4.1s – 5.4s)
     addTimer(() => {
       setScene(3);
-      soundFx.playTransformation();
-      haptics.impactMedium();
-    }, 5600);
+      setIsLidClosed(true);
+    }, 4100);
 
-    // SCENE 4: Brand Reveal & Transition (7.4s – 9.8s)
+    // Lid contact moment (tactile mechanical closure)
+    addTimer(() => {
+      soundFx.playBoxClose();
+      haptics.impactMedium();
+    }, 4550);
+
+    // SCENE 4: Final Brand Reveal (5.4s – 7.8s)
     addTimer(() => {
       setScene(4);
       soundFx.playBrandReveal();
       haptics.success();
-    }, 7400);
+    }, 5400);
 
-    // Fade out and handoff to workspace at 9.6s
+    // Smooth handoff to application workspace
     addTimer(() => {
       finishAnimation();
-    }, 9600);
+    }, 7800);
 
     return () => {
       timersRef.current.forEach(clearTimeout);
@@ -279,269 +171,214 @@ export const IntroAnimation: React.FC = () => {
       role="dialog"
       aria-modal="true"
       aria-label="Welcome to Resume Tailor"
+      onPointerDown={handleTouchUnlock}
+      onTouchStart={handleTouchUnlock}
       className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden bg-[#0A0D14] text-white select-none transition-opacity duration-600 ease-out ${
         isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
-      style={{ perspective: '1200px' }}
+      style={{ perspective: '1000px' }}
     >
-      {/* Dynamic Background Glow & Ambient Light */}
+      {/* Calm, Minimal Ambient Lighting */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
-          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[140px] transition-all duration-1000 ${
-            scene === 1
-              ? 'bg-[#0066CC]/20 scale-75'
-              : scene === 2
-              ? 'bg-blue-600/30 scale-100'
-              : scene === 3
-              ? 'bg-gradient-to-tr from-[#0066CC]/40 via-purple-600/40 to-cyan-400/40 scale-125'
-              : 'bg-[#0066CC]/35 scale-110'
+          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[130px] transition-all duration-1000 ${
+            scene === 4 ? 'bg-[#0066CC]/20 scale-110' : 'bg-[#0066CC]/12 scale-100'
           }`}
         />
-        {/* Subtle grid lines background */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff06_1px,transparent_1px),linear-gradient(to_bottom,#ffffff06_1px,transparent_1px)] bg-[size:48px_48px]" />
       </div>
 
-      {/* Top Floating Control Bar */}
-      <div className="absolute top-4 sm:top-6 inset-x-4 sm:inset-x-8 flex items-center justify-between z-30">
-        {/* Sound toggle button */}
+      {/* Top Floating Controls */}
+      <div className="absolute top-4 sm:top-6 inset-x-4 sm:inset-x-8 flex items-center justify-between z-30 pointer-events-auto">
+        {/* Sound toggle */}
         <button
           onClick={handleToggleMute}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/15 text-xs text-white/80 transition-all active:scale-95 touch-manipulation"
-          title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.07] hover:bg-white/[0.12] active:bg-white/[0.15] backdrop-blur-md border border-white/10 text-xs text-white/70 transition-all active:scale-95 touch-manipulation"
+          title={isMuted ? 'Unmute' : 'Mute'}
+          aria-label={isMuted ? 'Unmute sound' : 'Mute sound'}
         >
           {isMuted ? (
-            <>
-              <VolumeX className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-[11px] font-medium hidden sm:inline">Muted</span>
-            </>
+            <VolumeX className="w-3.5 h-3.5 text-zinc-400" />
           ) : (
-            <>
-              <Volume2 className="w-3.5 h-3.5 text-blue-400" />
-              <span className="text-[11px] font-medium hidden sm:inline">Sound Active</span>
-            </>
+            <Volume2 className="w-3.5 h-3.5 text-[#0066CC]" />
           )}
         </button>
 
         {/* Skip button */}
         <button
           onClick={handleSkip}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-xs font-semibold text-white transition-all active:scale-95 touch-manipulation"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.07] hover:bg-white/[0.12] active:bg-white/[0.15] backdrop-blur-md border border-white/10 text-xs font-medium text-white/80 transition-all active:scale-95 touch-manipulation"
+          aria-label="Skip intro"
         >
-          <span>Skip Intro</span>
+          <span>Skip</span>
           <FastForward className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* Center Stage: The 3D Magic Resume Box Container */}
+      {/* Center Stage: Minimalist Box & Brand Reveal */}
       <div className="relative flex items-center justify-center w-72 h-72 sm:w-80 sm:h-80 z-10">
-        {/* SCENES 1, 2, 3: The 3D Magic Box */}
+        {/* SCENES 1, 2, 3: The Minimalist Box */}
         {scene < 4 && (
           <div
             className={`relative flex items-center justify-center transition-all duration-300 ${
-              boxReaction ? 'scale-110' : 'scale-100'
+              boxReaction ? 'scale-[0.97] translate-y-1' : 'scale-100 translate-y-0'
             }`}
             style={{
-              transformStyle: 'preserve-3d',
-              transition: 'transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+              transition: 'transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1)',
             }}
           >
-            {/* Box Floor Shadow */}
+            {/* Box Soft Floor Shadow */}
             <div
-              className={`absolute -bottom-14 w-52 sm:w-60 h-10 rounded-full blur-xl transition-all duration-500 ${
-                scene === 3
-                  ? 'bg-blue-400/50 scale-125'
-                  : 'bg-[#0066CC]/35 scale-100'
+              className={`absolute -bottom-8 w-44 sm:w-52 h-7 rounded-full bg-black/50 blur-lg transition-all duration-500 ${
+                isLidClosed ? 'scale-100 opacity-60' : 'scale-90 opacity-40'
               }`}
             />
 
-            {/* Shockwave Rings on Impact */}
-            {boxReaction && (
-              <div className="absolute inset-0 rounded-3xl border-2 border-cyan-400/80 animate-ping pointer-events-none" />
-            )}
+            {/* The 3D Box Body Container */}
+            <div className="relative w-36 h-28 sm:w-44 sm:h-32 rounded-2xl bg-[#121722] border border-white/15 shadow-2xl flex flex-col justify-end overflow-hidden">
+              {/* Recessed Interior Cavity (visible when lid is open) */}
+              <div
+                className={`absolute inset-x-2 top-2 bottom-3 rounded-xl bg-[#080B11] border border-white/5 transition-opacity duration-400 ${
+                  isLidClosed ? 'opacity-10' : 'opacity-100'
+                }`}
+              >
+                {/* Gentle interior depth gradient */}
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0066CC]/10" />
+              </div>
 
-            {/* Magic Transformation Energy Wave */}
-            {scene === 3 && (
-              <>
-                <div className="absolute -inset-10 rounded-full border border-cyan-400/40 animate-ping duration-1000" />
-                <div className="absolute -inset-16 rounded-full border border-blue-500/30 animate-pulse duration-700" />
-              </>
-            )}
-
-            {/* 3D Box Main Body */}
-            <div
-              className={`relative w-40 h-40 sm:w-48 sm:h-48 rounded-3xl p-1 bg-gradient-to-b from-[#0066CC] via-[#004C99] to-[#0A2540] shadow-2xl border border-cyan-400/40 flex flex-col items-center justify-center transition-all duration-700 ${
-                scene === 1
-                  ? 'animate-in zoom-in-50 duration-1000'
-                  : scene === 3
-                  ? 'ring-8 ring-cyan-400/30 scale-105'
-                  : ''
-              }`}
-              style={{
-                boxShadow:
-                  scene === 3
-                    ? '0 0 70px rgba(0, 200, 255, 0.6), inset 0 0 30px rgba(255, 255, 255, 0.4)'
-                    : '0 25px 60px -10px rgba(0, 102, 204, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.3)',
-              }}
-            >
-              {/* Inner Glowing Depth Cavity */}
-              <div className="w-full h-full rounded-[22px] bg-gradient-to-b from-[#071324] via-[#0B1E38] to-[#08182B] flex flex-col items-center justify-center p-3 relative overflow-hidden border border-white/10">
-                {/* Glowing Top Lid Accent */}
-                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-80" />
-
-                {/* Box Emblem */}
-                <div
-                  className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-tr from-[#0066CC] to-[#2997FF] flex items-center justify-center text-white shadow-lg transition-transform duration-300 ${
-                    boxReaction ? 'scale-125 rotate-6' : 'scale-100'
-                  }`}
-                >
-                  <Sparkles className="w-8 h-8 animate-pulse text-white" />
+              {/* Box Front Face with Subtle Matte Monogram */}
+              <div className="relative z-10 w-full h-18 sm:h-20 bg-gradient-to-b from-[#18202D] to-[#0E131C] rounded-b-2xl border-t border-white/10 flex items-center justify-center">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/[0.04] border border-white/10 flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0066CC]" />
                 </div>
+              </div>
 
-                {/* Box Title */}
-                <div className="text-center mt-2.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">
-                    Magic Resume Vault
-                  </span>
-                  <div className="flex items-center justify-center gap-1 mt-0.5 text-[11px] text-white/70">
-                    <span>Absorbing Facts:</span>
-                    <span className="font-bold text-white">
-                      {absorbedItems.length}/10
-                    </span>
-                  </div>
-                </div>
-
-                {/* Tiny Light Particles emitting from inside the box */}
-                <div className="absolute bottom-1 inset-x-2 flex justify-around opacity-60">
-                  <span className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-300 animate-ping" />
-                  <span className="w-1 h-1 rounded-full bg-cyan-200 animate-bounce delay-150" />
-                </div>
+              {/* Animated Top Lid */}
+              <div
+                className="absolute top-0 inset-x-0 h-9 sm:h-10 rounded-t-2xl bg-gradient-to-b from-[#222C3D] to-[#161D29] border-t border-x border-white/20 shadow-md z-20 origin-top transition-all duration-450 ease-out"
+                style={{
+                  transformStyle: 'preserve-3d',
+                  transform: isLidClosed
+                    ? 'perspective(600px) rotateX(0deg) translateY(0)'
+                    : 'perspective(600px) rotateX(-55deg) translateY(-10px)',
+                  boxShadow: isLidClosed
+                    ? '0 1px 0 rgba(255,255,255,0.2) inset, 0 4px 12px rgba(0,0,0,0.4)'
+                    : 'none',
+                }}
+              >
+                {/* Subtle flush seam highlight when closed */}
+                {isLidClosed && (
+                  <div className="absolute bottom-0 inset-x-0 h-[1px] bg-white/20" />
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* SCENE 2: Flying Career Objects */}
+        {/* SCENE 2: Flying Minimalist Career Items (Pure Visual Tokens - Zero Text) */}
         {scene === 2 &&
           CAREER_ITEMS.map((item, idx) => {
             const isLaunched = activeItemIndex >= idx;
             const isAbsorbed = absorbedItems.includes(idx);
             if (!isLaunched || isAbsorbed) return null;
 
-            const Icon = item.icon;
-
             return (
               <div
                 key={item.id}
-                className="absolute z-20 pointer-events-none transition-all ease-in"
+                className="absolute z-20 pointer-events-none"
                 style={{
-                  animation: `flyToBox 600ms cubic-bezier(0.2, 0.8, 0.4, 1) forwards`,
-                  // CSS Custom properties for dynamic flight path
+                  animation: `flyToBox 650ms cubic-bezier(0.25, 0.8, 0.4, 1) forwards`,
                   ['--start-x' as string]: `${item.startX}vw`,
                   ['--start-y' as string]: `${item.startY}vh`,
                   ['--start-rot' as string]: `${item.rotate}deg`,
                 }}
               >
-                <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/40 text-[#1D1D1F]">
-                  <div
-                    className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${item.gradient} text-white flex items-center justify-center shadow-sm shrink-0`}
-                  >
-                    <Icon className="w-4 h-4" />
+                {/* 1. Resume Document */}
+                {item.type === 'resume' && (
+                  <div className="w-12 h-16 sm:w-14 sm:h-18 rounded-lg bg-white/95 backdrop-blur-sm shadow-xl border border-white/60 p-2 flex flex-col justify-between">
+                    <div className="flex items-center gap-1.5 border-b border-zinc-200 pb-1">
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#0066CC]" />
+                      <div className="w-5 h-1 bg-zinc-300 rounded-full" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="w-full h-1 bg-zinc-200 rounded-full" />
+                      <div className="w-4/5 h-1 bg-zinc-200 rounded-full" />
+                      <div className="w-3/5 h-1 bg-zinc-200 rounded-full" />
+                    </div>
+                    <div className="w-1/2 h-1 bg-[#0066CC]/50 rounded-full" />
                   </div>
-                  <div className="text-left pr-1 whitespace-nowrap">
-                    <p className="text-xs font-bold text-[#1D1D1F] leading-tight">
-                      {item.title}
-                    </p>
-                    <p className="text-[10px] text-[#666666] leading-none mt-0.5">
-                      {item.subtitle}
-                    </p>
+                )}
+
+                {/* 2. Professional Profile */}
+                {item.type === 'profile' && (
+                  <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-[#1E293B] shadow-xl border border-white/20 flex items-center justify-center text-white">
+                    <User className="w-5 h-5 text-indigo-400" />
                   </div>
-                </div>
+                )}
+
+                {/* 3. Degree / Education */}
+                {item.type === 'education' && (
+                  <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-[#1E293B] shadow-xl border border-white/20 flex items-center justify-center text-white">
+                    <GraduationCap className="w-5 h-5 text-purple-400" />
+                  </div>
+                )}
+
+                {/* 4. Experience / Work */}
+                {item.type === 'experience' && (
+                  <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-[#1E293B] shadow-xl border border-white/20 flex items-center justify-center text-white">
+                    <Briefcase className="w-5 h-5 text-[#0066CC]" />
+                  </div>
+                )}
+
+                {/* 5. Technical Skills */}
+                {item.type === 'skills' && (
+                  <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-[#1E293B] shadow-xl border border-white/20 flex items-center justify-center text-white">
+                    <Code2 className="w-5 h-5 text-emerald-400" />
+                  </div>
+                )}
               </div>
             );
           })}
 
         {/* SCENE 4: Resume Tailor Final Brand Reveal */}
         {scene === 4 && (
-          <div className="flex flex-col items-center text-center z-20 animate-in zoom-in-75 duration-700">
-            {/* Glowing Logo Icon */}
-            <div className="relative mb-5">
-              <div className="absolute -inset-4 bg-gradient-to-r from-[#0066CC] to-[#2997FF] rounded-3xl blur-2xl opacity-60 animate-pulse" />
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-[#0052A3] via-[#0066CC] to-[#2997FF] flex items-center justify-center text-white shadow-2xl border border-white/30 ring-4 ring-white/10">
-                <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-white animate-pulse" />
+          <div className="flex flex-col items-center justify-center text-center z-20 animate-in fade-in zoom-in-95 duration-700 ease-out">
+            {/* Minimalist Logo Mark */}
+            <div className="relative mb-4">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#141A24] border border-white/15 shadow-2xl flex items-center justify-center">
+                <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-[#0066CC]" />
               </div>
             </div>
 
-            {/* Application Title */}
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white flex items-center gap-2">
-              <span>RESUME</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2997FF] to-cyan-300">
-                TAILOR
-              </span>
+            {/* Application Name (ONLY text displayed) */}
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white font-sans">
+              Resume Tailor
             </h1>
-
-            {/* Subtitle */}
-            <p className="text-sm sm:text-base text-white/80 font-medium mt-2 tracking-wide max-w-xs sm:max-w-md">
-              &ldquo;Craft Your Career. Shape Your Future.&rdquo;
-            </p>
-
-            {/* Badges */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs text-white/90">
-                <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" />
-                <span>100% Factual Grounding</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-xs text-emerald-300">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Zero Hallucinations</span>
-              </span>
-            </div>
           </div>
         )}
       </div>
 
-      {/* Bottom Scene Status Indicator */}
-      <div className="absolute bottom-6 sm:bottom-8 inset-x-4 text-center z-20">
-        <p className="text-xs font-medium text-white/60 tracking-wider uppercase">
-          {scene === 1 && 'Assembling Career Vault...'}
-          {scene === 2 && 'Gathering Experience, Skills & Credentials...'}
-          {scene === 3 && 'Synthesizing Verified Career Ground Truth...'}
-          {scene === 4 && 'Opening Studio Workspace...'}
-        </p>
-
-        {/* Progress dots */}
-        <div className="flex items-center justify-center gap-2 mt-2.5">
-          {[1, 2, 3, 4].map((step) => (
-            <span
-              key={step}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                scene === step
-                  ? 'w-6 bg-[#2997FF]'
-                  : scene > step
-                  ? 'w-2 bg-emerald-400'
-                  : 'w-2 bg-white/20'
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Keyframe animations for item flight paths */}
+      {/* Flight Keyframes */}
       <style jsx>{`
         @keyframes flyToBox {
           0% {
-            transform: translate3d(var(--start-x), var(--start-y), 200px)
-              rotate(var(--start-rot)) scale(1.15);
+            transform: translate3d(var(--start-x), var(--start-y), 60px)
+              rotate(var(--start-rot)) scale(1);
             opacity: 0;
           }
           15% {
             opacity: 1;
           }
-          85% {
+          75% {
             opacity: 0.95;
+            transform: translate3d(
+                calc(var(--start-x) * 0.12),
+                calc(var(--start-y) * 0.12),
+                10px
+              )
+              rotate(calc(var(--start-rot) * 0.15)) scale(0.65);
           }
           100% {
-            transform: translate3d(0, 0, -80px) rotate(0deg) scale(0.2);
+            transform: translate3d(0, 0, -30px) rotate(0deg) scale(0.2);
             opacity: 0;
           }
         }
